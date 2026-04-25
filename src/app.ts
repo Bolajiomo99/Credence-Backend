@@ -24,6 +24,7 @@ import {
 import { compressionMiddleware, compressionMetricsMiddleware } from './middleware/compression.js'
 import { metricsMiddleware, register } from './middleware/metrics.js'
 import { createMembersRouter } from './routes/admin/member.ts'
+import { createAuditLogRouter } from './routes/auditLog.js'
 
 const app = express()
 
@@ -119,6 +120,9 @@ const analyticsService = process.env.DATABASE_URL
   ? new AnalyticsService(pool, analyticsThresholdSeconds)
   : undefined
 app.use('/api/analytics', createAnalyticsRouter(analyticsService))
+
+// Audit log export (admin only, NDJSON streaming)
+app.use('/api/audit', createAuditLogRouter())
 
 // Final error handler
 app.use(errorHandler)
