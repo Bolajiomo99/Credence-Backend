@@ -24,6 +24,7 @@ import {
 import { compressionMiddleware, compressionMetricsMiddleware } from './middleware/compression.js'
 import { metricsMiddleware, register } from './middleware/metrics.js'
 import { createMembersRouter } from './routes/admin/member.ts'
+import { createPayoutsRouter } from './routes/payouts.js'
 
 const app = express()
 
@@ -119,6 +120,9 @@ const analyticsService = process.env.DATABASE_URL
   ? new AnalyticsService(pool, analyticsThresholdSeconds)
   : undefined
 app.use('/api/analytics', createAnalyticsRouter(analyticsService))
+
+// Payouts – idempotent payout creation
+app.use('/api/payouts', createPayoutsRouter())
 
 // Final error handler
 app.use(errorHandler)
