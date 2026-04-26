@@ -37,7 +37,7 @@ export function createAdminRouter(): Router {
   /**
    * GET /api/admin/users
    */
-  router.get('/users', requireUserAuth, requireAdminRole, async (req: Request, res: Response) => {
+  router.get('/users', requireUserAuth, requireAdminRole, async (req: Request, res: Response, next) => {
     try {
       const authReq = req as AuthenticatedRequest
       const user = authReq.user!
@@ -75,7 +75,7 @@ export function createAdminRouter(): Router {
   /**
    * POST /api/admin/roles/assign
    */
-  router.post('/roles/assign', requireUserAuth, requireAdminRole, async (req: Request, res: Response) => {
+  router.post('/roles/assign', requireUserAuth, requireAdminRole, async (req: Request, res: Response, next) => {
     try {
       const authReq = req as AuthenticatedRequest
       const user = authReq.user!
@@ -101,7 +101,7 @@ export function createAdminRouter(): Router {
   /**
    * POST /api/admin/keys/revoke
    */
-  router.post('/keys/revoke', requireUserAuth, requireAdminRole, async (req: Request, res: Response) => {
+  router.post('/keys/revoke', requireUserAuth, requireAdminRole, async (req: Request, res: Response, next) => {
     try {
       const authReq = req as AuthenticatedRequest
       const user = authReq.user!
@@ -146,6 +146,7 @@ export function createAdminRouter(): Router {
       const issued = impersonationService.issueToken(
         user.id,
         user.email,
+        user.tenantId,
         {
           targetUserId: body.targetUserId,
           reason: body.reason,
@@ -181,7 +182,7 @@ export function createAdminRouter(): Router {
     }
 
     try {
-      impersonationService.revokeToken(user.id, user.email, tokenId, req.ip)
+      impersonationService.revokeToken(user.id, user.email, user.tenantId, tokenId, req.ip)
       res.status(200).json({ success: true })
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error'
@@ -196,7 +197,7 @@ export function createAdminRouter(): Router {
   /**
    * GET /api/admin/audit-logs
    */
-  router.get('/audit-logs', requireUserAuth, requireAdminRole, async (req: Request, res: Response) => {
+  router.get('/audit-logs', requireUserAuth, requireAdminRole, async (req: Request, res: Response, next) => {
     try {
       const authReq = req as AuthenticatedRequest
       const user = authReq.user!
@@ -290,7 +291,7 @@ export function createAdminRouter(): Router {
    * 
    * List failed inbound events for review
    */
-  router.get('/events/failed', requireUserAuth, requireAdminRole, async (req: Request, res: Response) => {
+  router.get('/events/failed', requireUserAuth, requireAdminRole, async (req: Request, res: Response, next) => {
     try {
       const filters: any = {}
       if (req.query.status) filters.status = req.query.status
@@ -315,7 +316,7 @@ export function createAdminRouter(): Router {
    * 
    * Replay a specific failed event
    */
-  router.post('/events/replay/:id', requireUserAuth, requireAdminRole, async (req: Request, res: Response) => {
+  router.post('/events/replay/:id', requireUserAuth, requireAdminRole, async (req: Request, res: Response, next) => {
     try {
       const authReq = req as AuthenticatedRequest
       const admin = authReq.user!
@@ -325,6 +326,7 @@ export function createAdminRouter(): Router {
         id,
         admin.id,
         admin.email,
+        admin.tenantId,
         req.ip
       )
 

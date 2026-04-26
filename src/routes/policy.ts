@@ -37,7 +37,8 @@ export function createPolicyRouter(): Router {
       }
 
       try {
-        const rule = policyService.createRule(authReq.user!.id, authReq.user!.email, {
+        const user = authReq.user!
+        const rule = policyService.createRule(user.tenantId, user.id, user.email, {
           orgId,
           subject: body.subject,
           action: body.action,
@@ -86,9 +87,11 @@ export function createPolicyRouter(): Router {
     (req: Request, res: Response) => {
       const authReq = req as AuthenticatedRequest
       try {
+        const user = authReq.user!
         const rule = policyService.updateRule(
-          authReq.user!.id,
-          authReq.user!.email,
+          user.tenantId,
+          user.id,
+          user.email,
           req.params.ruleId,
           req.body,
         )
@@ -108,7 +111,8 @@ export function createPolicyRouter(): Router {
     (req: Request, res: Response) => {
       const authReq = req as AuthenticatedRequest
       try {
-        policyService.deleteRule(authReq.user!.id, authReq.user!.email, req.params.ruleId)
+        const user = authReq.user!
+        policyService.deleteRule(user.tenantId, user.id, user.email, req.params.ruleId)
         res.status(204).send()
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Unknown error'

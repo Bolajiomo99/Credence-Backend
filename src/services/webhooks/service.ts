@@ -20,7 +20,7 @@ export class WebhookService {
    * Rotate a webhook's signing secret.
    * Moves current secret to previousSecret and generates a new one.
    */
-  async rotateSecret(id: string, admin?: { id: string, email: string }): Promise<WebhookConfig> {
+  async rotateSecret(id: string, admin?: { id: string, email: string, tenantId: string }): Promise<WebhookConfig> {
     const webhook = await this.store.get(id)
     if (!webhook) {
       throw new Error('Webhook not found')
@@ -35,6 +35,7 @@ export class WebhookService {
 
     if (this.auditLog && admin) {
       this.auditLog.logAction(
+        admin.tenantId,
         admin.id,
         admin.email,
         AuditAction.ROTATE_WEBHOOK_SECRET,
@@ -50,7 +51,7 @@ export class WebhookService {
   /**
    * Revoke the previous secret for a webhook.
    */
-  async revokePreviousSecret(id: string, admin?: { id: string, email: string }): Promise<WebhookConfig> {
+  async revokePreviousSecret(id: string, admin?: { id: string, email: string, tenantId: string }): Promise<WebhookConfig> {
     const webhook = await this.store.get(id)
     if (!webhook) {
       throw new Error('Webhook not found')
@@ -61,6 +62,7 @@ export class WebhookService {
 
     if (this.auditLog && admin) {
       this.auditLog.logAction(
+        admin.tenantId,
         admin.id,
         admin.email,
         AuditAction.REVOKE_WEBHOOK_SECRET,

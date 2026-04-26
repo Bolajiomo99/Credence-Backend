@@ -47,6 +47,7 @@ export class ReplayService {
     id: string,
     adminId: string,
     adminEmail: string,
+    tenantId: string,
     ipAddress?: string
   ): Promise<{ success: boolean; message: string }> {
     const event = await this.repository.findById(id)
@@ -69,6 +70,7 @@ export class ReplayService {
       await this.repository.updateStatus(id, 'replayed')
 
       auditLogService.logAction(
+        tenantId,
         adminId,
         adminEmail,
         'REPLAY_EVENT' as any, // Should add to AuditAction enum
@@ -85,6 +87,7 @@ export class ReplayService {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       
       auditLogService.logAction(
+        tenantId,
         adminId,
         adminEmail,
         'REPLAY_EVENT' as any,
