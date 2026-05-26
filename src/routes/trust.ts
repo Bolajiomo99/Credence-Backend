@@ -11,10 +11,10 @@ router.get(
   '/:address',
   validate({ params: trustPathParamsSchema }),
   apiKeyMiddleware,
-  (req: Request, res: Response) => {
+  async (req: Request, res: Response) => {
     const { address } = req.validated!.params! as { address: string }
 
-    const trustScore = getTrustScore(address)
+    const trustScore = await getTrustScore(address)
 
     if (!trustScore) {
       throw new NotFoundError('Identity record', address)

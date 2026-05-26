@@ -8,7 +8,16 @@
  *   Attestations : up to 30 pts  (30 pts at ≥ 5 attestations)
  */
 
-import { getIdentity, type Identity } from '../db/store.js'
+import { pool } from '../db/pool.js'
+import { cache } from '../cache/index.js'
+
+export interface IdentityRecord {
+  address: string
+  bondedAmount: string
+  bondStart: string | null
+  attestationCount: number
+  agreedFields?: Record<string, string>
+}
 
 export interface TrustScore {
   address: string
@@ -56,7 +65,7 @@ export function computeAttestationScore(count: number): number {
 }
 
 /** Compute a full TrustScore from an Identity record. */
-export function computeTrustScore(identity: Identity): TrustScore {
+export function computeTrustScoreFromRecord(identity: IdentityRecord): TrustScore {
   const bondScore = computeBondScore(identity.bondedAmount)
   const durationScore = computeDurationScore(identity.bondStart)
   const attestationScore = computeAttestationScore(identity.attestationCount)
@@ -75,9 +84,39 @@ export function computeTrustScore(identity: Identity): TrustScore {
 /**
  * Look up an identity by address and return its computed trust score,
  * or null when no record exists.
+ * Uses Redis cache and Postgres DB.
  */
-export function getTrustScore(address: string): TrustScore | null {
-  const identity = getIdentity(address)
-  if (!identity) return null
-  return computeTrustScore(identity)
+export async function getTrustScore(address: string): Promise<TrustScore | null> {
+  const cacheKey = address.toLowerCase()
+  
+  // 1. Try cache
+  const cached = await cache.get<TrustScore>('trust', cacheKey)
+  if (cached) return cached
+
+  // 2. Try DB
+  const { rows } = await pool.query(
+    `SELECT address, bonded_amount as "bondedAmount", 
+            bond_start as "bondStart", 
+            (SELECT COUNT(*)::int FROM attestations WHERE subject_address = address) as "attestationCount"
+     FROM identities
+     WHERE address = $1`,
+    [address]
+  )
+
+  if (rows.length === 0) return null
+
+  const record: IdentityRecord = rows[0]
+  const trustScore = computeTrustScoreFromRecord(record)
+
+  // 3. Save to cache (TTL 1 hour)
+  await cache.set('trust', cacheKey, trustScore, 3600)
+
+  return trustScore
+}
+
+/**
+ * Invalidate the trust score cache for a given address.
+ */
+export async function invalidateTrustScoreCache(address: string): Promise<void> {
+  await cache.delete('trust', address.toLowerCase())
 }

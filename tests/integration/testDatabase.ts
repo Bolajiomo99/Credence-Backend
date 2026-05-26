@@ -1,8 +1,15 @@
 import { Pool } from 'pg'
 import { GenericContainer, Wait, type StartedTestContainer } from 'testcontainers'
+import { createClient, type RedisClientType } from 'redis'
 
 export interface TestDatabase {
   pool: Pool
+  close: () => Promise<void>
+  connectionString: string
+}
+
+export interface TestCache {
+  client: RedisClientType
   close: () => Promise<void>
   connectionString: string
 }
@@ -51,6 +58,29 @@ export async function createTestDatabase(): Promise<TestDatabase> {
     pool,
     close: async () => {
       await pool.end()
+      await container.stop()
+    },
+  }
+}
+
+export async function createTestCache(): Promise<TestCache> {
+  const container: StartedTestContainer = await new GenericContainer('redis:7-alpine')
+    .withExposedPorts(6379)
+    .withWaitStrategy(Wait.forLogMessage(/Ready to accept connections/i))
+    .start()
+
+  const host = container.getHost()
+  const port = container.getMappedPort(6379)
+  const connectionString = `redis://${host}:${port}`
+
+  const client = createClient({ url: connectionString }) as RedisClientType
+  await client.connect()
+
+  return {
+    client,
+    connectionString,
+    close: async () => {
+      await client.quit()
       await container.stop()
     },
   }

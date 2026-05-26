@@ -15,7 +15,7 @@ const server = new Horizon.Server(HORIZON_URL)
  * @param {ReplayService} replayService Service to capture failures
  * @param {function} onEvent Callback for each bond creation event
  */
-export function subscribeBondCreationEvents(onEvent?: (event: { identity: { id: string }; bond: { id: string; amount: string; duration: string | null } }) => void) {
+export function subscribeBondCreationEvents(onEvent?: (event: { identity: { id: string }; bond: { id: string; address: string; amount: string; duration: string | null } }) => void) {
   // Example: Listen to operations of type 'create_bond' (custom event)
   let cursor = 'now';
   let stream;
@@ -42,8 +42,6 @@ export function subscribeBondCreationEvents(onEvent?: (event: { identity: { id: 
       });
   };
   startStream();
-
-  startStream()
 }
 
 /**
@@ -57,6 +55,7 @@ function parseBondEvent(op: { source_account: string; id: string; amount: string
     identity: { id: op.source_account },
     bond: {
       id: op.id,
+      address: op.source_account,
       amount: op.amount,
       duration: op.duration ?? null,
     },
