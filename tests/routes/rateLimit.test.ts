@@ -269,35 +269,20 @@ describe('Rate Limit Middleware', () => {
 
   describe('fail-open behavior', () => {
     it('should allow traffic when Redis throws and failOpen is true', async () => {
-      const brokenRedis = {
-        incr: vi.fn().mockRejectedValue(new Error('Redis down')),
-        expire: vi.fn(),
-        ttl: vi.fn(),
-      }
-
-      vi.doMock('../../src/cache/redis.js', () => ({
-        RedisConnection: {
-          getInstance: () => ({ getClient: () => brokenRedis }),
-        },
-      }))
-
-      // Re-import to pick up the mocked Redis
-      const { createRateLimitMiddleware: createWithBrokenRedis } = await import(
-        '../../src/middleware/rateLimit.js'
-      )
+      const spyIncr = vi.spyOn(mockRedis, 'incr').mockRejectedValue(new Error('Redis down'))
 
       const app = express()
       app.use(express.json())
       app.use(
         '/api',
-        createWithBrokenRedis({
+        createRateLimitMiddleware({
           enabled: true,
           windowSec: 60,
           maxFree: 1,
           maxPro: 1,
           maxEnterprise: 1,
           failOpen: true,
-        })
+        }, { namespace: 'ratelimit:failopen1' })
       )
       app.get('/api/ping', (_req, res) => res.json({ ok: true }))
 
@@ -305,37 +290,25 @@ describe('Rate Limit Middleware', () => {
       expect(res.status).toBe(200)
       expect(res.headers['x-ratelimit-limit']).toBeDefined()
       expect(res.headers['x-ratelimit-remaining']).toBeDefined()
+      
+      spyIncr.mockRestore()
     })
 
     it('should return 503 when Redis throws and failOpen is false', async () => {
-      const brokenRedis = {
-        incr: vi.fn().mockRejectedValue(new Error('Redis down')),
-        expire: vi.fn(),
-        ttl: vi.fn(),
-      }
-
-      vi.doMock('../../src/cache/redis.js', () => ({
-        RedisConnection: {
-          getInstance: () => ({ getClient: () => brokenRedis }),
-        },
-      }))
-
-      const { createRateLimitMiddleware: createWithBrokenRedis } = await import(
-        '../../src/middleware/rateLimit.js'
-      )
+      const spyIncr = vi.spyOn(mockRedis, 'incr').mockRejectedValue(new Error('Redis down'))
 
       const app = express()
       app.use(express.json())
       app.use(
         '/api',
-        createWithBrokenRedis({
+        createRateLimitMiddleware({
           enabled: true,
           windowSec: 60,
           maxFree: 1,
           maxPro: 1,
           maxEnterprise: 1,
           failOpen: false,
-        })
+        }, { namespace: 'ratelimit:failopen2' })
       )
       app.get('/api/ping', (_req, res) => res.json({ ok: true }))
       app.use((_err: any, _req: any, res: any, _next: any) => {
@@ -345,6 +318,8 @@ describe('Rate Limit Middleware', () => {
       const res = await request(app).get('/api/ping')
       expect(res.status).toBe(503)
       expect(res.body.error).toMatch(/unavailable/i)
+      
+      spyIncr.mockRestore()
     })
   })
 

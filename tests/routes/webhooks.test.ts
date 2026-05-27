@@ -155,7 +155,7 @@ describe('Webhook Routes', () => {
         headers: { Authorization: ADMIN_BEARER },
       })
 
-      const { logs } = audit.getLogs()
+      const { logs } = await audit.getLogs(undefined, {}, 100, 0, { allowSuperScope: true })
       expect(logs).toHaveLength(1)
       expect(logs[0].action).toBe('ROTATE_WEBHOOK_SECRET')
       expect(logs[0].status).toBe('success')
@@ -198,7 +198,7 @@ describe('Webhook Routes', () => {
         headers: { Authorization: ADMIN_BEARER },
       })
 
-      const { logs } = audit.getLogs()
+      const { logs } = await audit.getLogs(undefined, {}, 100, 0, { allowSuperScope: true })
       expect(logs).toHaveLength(1)
       expect(logs[0].action).toBe('ROTATE_WEBHOOK_SECRET')
       expect(logs[0].status).toBe('failure')
