@@ -6,6 +6,7 @@ import { validate } from '../middleware/validate.js'
 import { createPayoutSchema } from '../schemas/index.js'
 import { pool } from '../db/pool.js'
 import { SettlementsRepository } from '../db/repositories/settlementsRepository.js'
+import { requireApiKey, ApiScope } from '../middleware/auth.js'
 
 /**
  * Creates the payouts router with idempotency protection.
@@ -22,9 +23,12 @@ export function createPayoutsRouter(): Router {
    * 
    * Creates a new payout record.
    * Protected by idempotency keys to prevent duplicate payouts on retries.
+   *
+   * @requires payouts:write scope
    */
   router.post(
     '/',
+    requireApiKey(ApiScope.PAYOUTS_WRITE),
     idempotencyMiddleware(idempotencyRepo),
     validate({ body: createPayoutSchema }),
     async (req: Request, res: Response, next) => {
