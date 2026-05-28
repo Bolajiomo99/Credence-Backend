@@ -274,6 +274,60 @@ curl http://localhost:3000/api/bond/not-an-address
 
 ---
 
+## Rate limiting
+
+All `/api/*` routes are rate-limited using fixed-window counters stored in Redis.
+Two independent counters are checked per request:
+
+| Counter | Scope | Purpose |
+|---------|-------|---------|
+| Tenant bucket | Per owner / IP | Enforces the tier ceiling shared across all keys of the same owner |
+| Key bucket | Per API key id | Prevents a single noisy key from exhausting the shared tenant budget |
+
+A request is rejected when **either** counter exceeds the limit.
+
+### Tiers
+
+| Tier | Default limit (per window) |
+|------|---------------------------|
+| `free` | 100 requests / 60 s |
+| `pro` | 1 000 requests / 60 s |
+| `enterprise` | 10 000 requests / 60 s |
+
+Limits are configurable via environment variables (see [Environment Variables](../README.md#environment-variables)).
+
+### Response headers
+
+Every response includes:
+
+| Header | Description |
+|--------|-------------|
+| `X-RateLimit-Limit` | Maximum requests allowed in the current window |
+| `X-RateLimit-Remaining` | Requests remaining (tighter of tenant vs key budget) |
+| `X-RateLimit-Reset` | Unix timestamp when the window resets |
+| `Retry-After` | Seconds to wait before retrying (only on `429`) |
+
+### Error response (`429`)
+
+```json
+{
+  "error": "Rate limit exceeded. Try again later.",
+  "code": "rate_limit_exceeded",
+  "details": { "retryAfter": 42, "limit": 100, "windowSec": 60 }
+}
+```
+
+### Redis unavailability
+
+Behaviour when Redis is unreachable is controlled by `RATE_LIMIT_FAIL_OPEN`:
+
+| `RATE_LIMIT_FAIL_OPEN` | Behaviour |
+|------------------------|-----------|
+| `false` (default in production) | Returns `503 Service Unavailable` — fail-closed |
+| `true` (default in dev/test) | Passes the request through — fail-open |
+
+---
+
 ## Error format
 
 All errors follow this shape:
