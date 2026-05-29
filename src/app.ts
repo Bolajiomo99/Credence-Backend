@@ -36,13 +36,16 @@ let rateLimitConfig: { enabled: boolean; windowSec: number; maxFree: number; max
 try {
   rateLimitConfig = validateConfig(process.env).rateLimit
 } catch {
+  // Fail-closed by default in production so a misconfigured startup cannot
+  // silently disable rate limiting and expose the API to abuse.
+  const isProd = process.env.NODE_ENV === 'production'
   rateLimitConfig = {
     enabled: true,
     windowSec: 60,
     maxFree: 100,
     maxPro: 1000,
     maxEnterprise: 10000,
-    failOpen: true,
+    failOpen: !isProd,
   }
 }
 

@@ -157,8 +157,12 @@ export const envSchema = z.object({
     .pipe(z.number().int().min(1)),
   RATE_LIMIT_FAIL_OPEN: z
     .string()
-    .default('true')
-    .transform((val: string) => val === 'true'),
+    .optional()
+    .transform((val) => {
+      // Explicit env var always wins; default is fail-closed in production
+      if (val !== undefined) return val === 'true'
+      return process.env.NODE_ENV !== 'production'
+    }),
 
   // Reputation scoring model
   REPUTATION_MODEL_VERSION: z.string().default('1.0.0'),
