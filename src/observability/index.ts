@@ -22,10 +22,4 @@ export {
   createSuccessEvent,
 } from './timeoutMetrics.js'
 
-export {
-  incrementOutboxDeadLetter,
-  incrementOutboxPublished,
-  incrementOutboxFailed,
-  setOutboxPendingGauge,
-  incrementOutboxLeaseRenew,
-} from './outboxMetrics.js'
+export { registerPoolMetrics } from './poolMetrics.js'

@@ -89,3 +89,67 @@ groups:
         annotations:
           summary: "Redis is down"
           description: "Redis health check failing"
+
+      # Slow health checks
+      - alert: SlowHealthCheck
+        expr: health_check_duration_seconds{job="credence-backend"} > 3
+        for: 5m
+        labels:
+          severity: warning
+          service: credence-backend
+        annotations:
+          summary: "Health check is slow"
+          description: "{{ $labels.dependency }} health check taking {{ $value }}s"
+
+      # Low verification rate (business metric)
+      - alert: LowVerificationRate
+        expr: rate(identity_verifications_total{job="credence-backend"}[10m]) < 0.1
+        for: 30m
+        labels:
+          severity: warning
+          service: credence-backend
+        annotations:
+          summary: "Low identity verification rate"
+          description: "Verification rate dropped to {{ $value }} req/s"
+
+      # High bulk verification failure rate
+      - alert: HighBulkVerificationFailureRate
+        expr: |
+          rate(bulk_verifications_total{job="credence-backend", status="error"}[5m])
+          / rate(bulk_verifications_total{job="credence-backend"}[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          service: credence-backend
+        annotations:
+          summary: "High bulk verification failure rate"
+          description: "Bulk verification failure rate is {{ $value | humanizePercentage }}"
+
+      # Pool saturation — connections exhausted
+      - alert: PgPoolSaturation
+        expr: |
+          pg_pool_waiting_count{job="credence-backend", pool="api"} > 0
+        for: 2m
+        labels:
+          severity: warning
+          service: credence-backend
+        annotations:
+          summary: "PostgreSQL connection pool saturated"
+          description: >-
+            API pool has {{ $value }} requests queued waiting for a
+            connection for >2 minutes. Consider increasing DB_POOL_MAX
+            or investigating slow queries.
+
+      # Worker pool saturation
+      - alert: PgWorkerPoolSaturation
+        expr: |
+          pg_pool_waiting_count{job="credence-backend", pool="worker"} > 0
+        for: 5m
+        labels:
+          severity: warning
+          service: credence-backend
+        annotations:
+          summary: "Worker connection pool saturated"
+          description: >-
+            Worker pool has {{ $value }} jobs queued waiting for a
+            connection for >5 minutes.

@@ -787,6 +787,14 @@ open http://localhost:3001
 | `health_check_status` | Gauge | dependency | Health status (1=up, 0=down) |
 | `health_check_duration_seconds` | Gauge | dependency | Health check duration |
 
+### Pool Metrics
+
+| Metric | Type | Labels | Description |
+|--------|------|--------|-------------|
+| `pg_pool_total_count` | Gauge | pool | Total clients (active + idle) |
+| `pg_pool_idle_count` | Gauge | pool | Idle clients |
+| `pg_pool_waiting_count` | Gauge | pool | Queued requests waiting |
+
 ### Business Metrics
 
 | Metric | Type | Labels | Description |

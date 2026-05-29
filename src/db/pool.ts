@@ -1,15 +1,61 @@
-import { Pool } from 'pg'
-import dotenv from 'dotenv'
+import { Pool } from "pg";
+import dotenv from "dotenv";
 
-dotenv.config()
+dotenv.config();
 
+/**
+ * Parse a numeric environment variable with a fallback default.
+ * Returns the fallback if the variable is missing or non-numeric.
+ * @internal Exported for testing only.
+ */
+export function envInt(key: string, fallback: number): number {
+  const raw = process.env[key];
+  if (raw === undefined || raw === "") return fallback;
+  const n = parseInt(raw, 10);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+const DB_URL = process.env.DB_URL;
+const POOL_MAX = envInt("DB_POOL_MAX", 20);
+const IDLE_TIMEOUT = envInt("DB_POOL_IDLE_TIMEOUT_MS", 30_000);
+const CONN_TIMEOUT = envInt("DB_POOL_CONNECTION_TIMEOUT_MS", 5_000);
+const STMT_TIMEOUT = envInt("DB_STATEMENT_TIMEOUT_MS", 30_000);
+const WORKER_MAX = envInt("DB_WORKER_POOL_MAX", 5);
+
+/**
+ * Primary API pool — serves route handlers and services.
+ *
+ * Configured with a default statement_timeout so that runaway queries
+ * are killed automatically and cannot hold connections indefinitely.
+ */
 export const pool = new Pool({
-     connectionString: process.env.DB_URL,
-     max: 10,
-     idleTimeoutMillis: 30_000,
-     connectionTimeoutMillis: 5_000,
-})
+  connectionString: DB_URL,
+  max: POOL_MAX,
+  idleTimeoutMillis: IDLE_TIMEOUT,
+  connectionTimeoutMillis: CONN_TIMEOUT,
+  options: `-c statement_timeout=${STMT_TIMEOUT}`,
+});
 
-pool.on('error', (err) => {
-     console.error('[pool] unexpected client error', err)
-})
+pool.on("error", (err) => {
+  console.error("[pool] unexpected client error", err);
+});
+
+/**
+ * Worker pool — bounded budget for background jobs (outbox, exports, reports).
+ *
+ * Runs with a smaller connection limit so that long-running background
+ * work cannot starve the API pool of connections. The statement_timeout
+ * is 4× longer than the API pool since report/export jobs are inherently
+ * slower.
+ */
+export const workerPool = new Pool({
+  connectionString: DB_URL,
+  max: WORKER_MAX,
+  idleTimeoutMillis: IDLE_TIMEOUT,
+  connectionTimeoutMillis: CONN_TIMEOUT,
+  options: `-c statement_timeout=${STMT_TIMEOUT * 4}`,
+});
+
+workerPool.on("error", (err) => {
+  console.error("[workerPool] unexpected client error", err);
+});

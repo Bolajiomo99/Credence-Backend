@@ -31,6 +31,33 @@ export const envSchema = z.object({
   // Database
   DB_URL: z.string().url({ message: 'DB_URL must be a valid URL' }),
 
+  // Database pool tuning
+  DB_POOL_MAX: z
+    .string()
+    .default('20')
+    .transform(Number)
+    .pipe(z.number().int().min(1).max(200)),
+  DB_POOL_IDLE_TIMEOUT_MS: z
+    .string()
+    .default('30000')
+    .transform(Number)
+    .pipe(z.number().int().min(0)),
+  DB_POOL_CONNECTION_TIMEOUT_MS: z
+    .string()
+    .default('5000')
+    .transform(Number)
+    .pipe(z.number().int().min(1000).max(30000)),
+  DB_STATEMENT_TIMEOUT_MS: z
+    .string()
+    .default('30000')
+    .transform(Number)
+    .pipe(z.number().int().min(0)),
+  DB_WORKER_POOL_MAX: z
+    .string()
+    .default('5')
+    .transform(Number)
+    .pipe(z.number().int().min(1).max(50)),
+
   // Redis
   REDIS_URL: z.string().url({ message: 'REDIS_URL must be a valid URL' }),
 
@@ -226,6 +253,15 @@ export interface Config {
       defaultMs: number
       criticalMs: number
     }
+    pool: {
+      max: number
+      idleTimeoutMillis: number
+      connectionTimeoutMillis: number
+      statementTimeoutMs: number
+    }
+    workerPool: {
+      max: number
+    }
   }
   redis: {
     url: string
@@ -363,6 +399,15 @@ function mapEnvToConfig(env: Env): Config {
         readonlyMs: env.DB_LOCK_TIMEOUT_READONLY_MS,
         defaultMs: env.DB_LOCK_TIMEOUT_DEFAULT_MS,
         criticalMs: env.DB_LOCK_TIMEOUT_CRITICAL_MS,
+      },
+      pool: {
+        max: env.DB_POOL_MAX,
+        idleTimeoutMillis: env.DB_POOL_IDLE_TIMEOUT_MS,
+        connectionTimeoutMillis: env.DB_POOL_CONNECTION_TIMEOUT_MS,
+        statementTimeoutMs: env.DB_STATEMENT_TIMEOUT_MS,
+      },
+      workerPool: {
+        max: env.DB_WORKER_POOL_MAX,
       },
     },
     redis: {
