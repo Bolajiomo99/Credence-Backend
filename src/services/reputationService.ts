@@ -10,8 +10,21 @@
  * All scoring weights are externalized to config and versioned via REPUTATION_MODEL_VERSION.
  */
 
-import { getIdentity, type Identity } from '../db/store.js'
 import { loadConfig } from '../config/index.js'
+
+/** Minimal identity shape needed for trust scoring. */
+export interface Identity {
+  address: string
+  bondedAmount: string
+  bondStart: string | null
+  attestationCount: number
+  agreedFields?: Record<string, string>
+}
+
+/** Repository interface for fetching identity data for trust scoring. */
+export interface TrustIdentityRepository {
+  getIdentityForScoring(address: string): Promise<Identity | null>
+}
 // Metrics for trust score cache
 import { Counter } from 'prom-client'
 import { register } from '../middleware/metrics.js'
@@ -134,11 +147,14 @@ export function computeTrustScore(
 /**
  * Look up an identity by address and return its computed trust score,
  * or null when no record exists.
- * Uses Redis cache and Postgres DB.
+ * Uses Redis cache and the provided identity repository.
  */
-export async function getTrustScore(address: string): Promise<TrustScore | null> {
+export async function getTrustScore(
+  address: string,
+  repo: TrustIdentityRepository
+): Promise<TrustScore | null> {
   const cacheKey = address.toLowerCase()
-  
+
   // 1. Try cache
   const cached = await cache.get<TrustScore>('trust', cacheKey)
   if (cached) {
@@ -147,8 +163,8 @@ export async function getTrustScore(address: string): Promise<TrustScore | null>
   }
   trustScoreCacheMisses.inc()
 
-  // 2. Try store/DB source
-  const identity = getIdentity(address)
+  // 2. Fetch from repository
+  const identity = await repo.getIdentityForScoring(address)
   if (!identity) {
     return null
   }
@@ -156,7 +172,8 @@ export async function getTrustScore(address: string): Promise<TrustScore | null>
   const trustScore = computeTrustScore(identity)
 
   // 3. Save to cache with configurable TTL
-  await cache.set('trust', cacheKey, trustScore, trustScoreCacheTtl)
+  const cacheTtl = loadConfig().trustScoreCache.ttl
+  await cache.set('trust', cacheKey, trustScore, cacheTtl)
 
   return trustScore
 }

@@ -11,10 +11,6 @@ vi.mock('../../cache/redis.js', () => ({
   },
 }))
 
-vi.mock('../../db/store.js', () => ({
-  getIdentity: vi.fn(),
-}))
-
 vi.mock('../../config/index.js', () => ({
   loadConfig: () => ({
     reputation: {
@@ -32,9 +28,12 @@ vi.mock('../../config/index.js', () => ({
   }),
 }))
 
-import { getIdentity } from '../../db/store.js'
 import { cache } from '../../cache/redis.js'
-import { getTrustScore, invalidateTrustScoreCache } from '../reputationService.js'
+import { getTrustScore, invalidateTrustScoreCache, type TrustIdentityRepository } from '../reputationService.js'
+
+const makeRepo = (identity: Awaited<ReturnType<TrustIdentityRepository['getIdentityForScoring']>>): TrustIdentityRepository => ({
+  getIdentityForScoring: vi.fn().mockResolvedValue(identity),
+})
 
 describe('TrustScore cache', () => {
   const address = '0xabc123'
@@ -46,18 +45,18 @@ describe('TrustScore cache', () => {
 
   it('should set cache on miss after reading identity', async () => {
     vi.mocked(cache.get).mockResolvedValue(null)
-    vi.mocked(getIdentity).mockReturnValue({
+    const repo = makeRepo({
       address: cacheKey,
       bondedAmount: '1000000000000000000',
       bondStart: new Date(Date.now() - 86_400_000).toISOString(),
       attestationCount: 3,
     })
 
-    const score = await getTrustScore(address)
+    const score = await getTrustScore(address, repo)
 
     expect(score).toBeTruthy()
     expect(cache.get).toHaveBeenCalledWith('trust', cacheKey)
-    expect(getIdentity).toHaveBeenCalledWith(address)
+    expect(repo.getIdentityForScoring).toHaveBeenCalledWith(address)
     expect(cache.set).toHaveBeenCalledWith(
       'trust',
       cacheKey,
@@ -75,11 +74,12 @@ describe('TrustScore cache', () => {
       attestationCount: 4,
       scoringModelVersion: 'test-model',
     })
+    const repo = makeRepo(null)
 
-    const score = await getTrustScore(address)
+    const score = await getTrustScore(address, repo)
 
     expect(score?.score).toBe(80)
-    expect(getIdentity).not.toHaveBeenCalled()
+    expect(repo.getIdentityForScoring).not.toHaveBeenCalled()
     expect(cache.set).not.toHaveBeenCalled()
   })
 
