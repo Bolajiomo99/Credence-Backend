@@ -22,6 +22,7 @@ import { validateConfig } from './config/index.js'
 import { createAttestationRouter } from './routes/attestations.js'
 import { compressionMiddleware, compressionMetricsMiddleware } from './middleware/compression.js'
 import { metricsMiddleware, register } from './middleware/metrics.js'
+import { securityHeadersWithOverride } from './middleware/securityHeaders.js'
 
 const app = express()
 
@@ -45,6 +46,7 @@ try {
 const rateLimitMiddleware = createRateLimitMiddleware(rateLimitConfig)
 
 app.use(requestIdMiddleware)
+app.use(securityHeadersWithOverride)
 
 app.get('/metrics', async (_req, res) => {
   res.set('Content-Type', register.contentType)
