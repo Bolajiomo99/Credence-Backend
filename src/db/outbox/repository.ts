@@ -454,6 +454,7 @@ export class OutboxRepository {
     processing: number
     published: number
     failed: number
+    dead_letter: number
   }> {
     const result = await db.query<{ status: OutboxEventStatus; count: string }>(
       `SELECT status, COUNT(*) as count
@@ -461,7 +462,13 @@ export class OutboxRepository {
        GROUP BY status`
     )
 
-    const stats = { pending: 0, processing: 0, published: 0, failed: 0 }
+    const stats: Record<OutboxEventStatus, number> = {
+      pending: 0,
+      processing: 0,
+      published: 0,
+      failed: 0,
+      dead_letter: 0,
+    }
     for (const row of result.rows) {
       stats[row.status] = parseInt(row.count, 10)
     }

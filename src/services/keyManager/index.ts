@@ -1,7 +1,6 @@
 import { generateKeyPair, exportJWK, SignJWT, jwtVerify, decodeProtectedHeader, importPKCS8 } from 'jose'
 import { randomUUID } from 'crypto'
-import type { KeyLike } from 'jose'
-import type { ManagedKey, JwksResponse, KeyManagerConfig, KeyAuditEvent } from './types.js'
+import type { ManagedKey, JwksResponse, KeyManagerConfig, KeyAuditEvent, KeyLike } from './types.js'
 
 const ALG = 'PS256'
 

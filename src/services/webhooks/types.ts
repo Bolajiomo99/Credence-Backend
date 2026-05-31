@@ -27,6 +27,10 @@ export interface WebhookConfig {
   secretRotatedAt?: string
   /** ISO timestamp after which previousSecret is no longer valid. */
   previousSecretExpiresAt?: string
+  /** Optional per-webhook delivery retry attempt cap. */
+  maxAttempts?: number
+  /** Optional per-webhook delivery timeout in milliseconds. */
+  timeoutMs?: number
 }
 
 /**

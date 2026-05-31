@@ -8,7 +8,7 @@
 import { Horizon } from '@stellar/stellar-sdk'
 import { upsertIdentity, upsertBond } from '../services/identityService.js'
 import { CursorRepository } from '../db/repositories/cursorRepository.js'
-import type { Pool } from 'pg'
+import { pool } from '../db/pool.js'
 import { register, Gauge } from 'prom-client'
 
 const HORIZON_URL = process.env.HORIZON_URL || 'https://horizon.stellar.org'
@@ -41,6 +41,7 @@ export function subscribeBondCreationEvents(replayService: {
   // Example: Listen to operations of type 'create_bond' (custom event)
   let cursor = 'now';
   let stream;
+  const cursorRepo = new CursorRepository(pool)
   const startStream = () => {
     stream = (server.operations() as any)
       .forAsset('BOND') // Replace with actual asset code if needed
