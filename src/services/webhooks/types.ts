@@ -27,6 +27,16 @@ export interface WebhookConfig {
   secretRotatedAt?: string
   /** ISO timestamp after which previousSecret is no longer valid. */
   previousSecretExpiresAt?: string
+  /** Optional mTLS client certificate (PEM format). */
+  clientCertPem?: string
+  /** Optional KMS reference for client private key (never stored as plaintext). */
+  clientKeyKmsRef?: string
+  /** Optional SHA256 hash of pinned server certificate for certificate pinning. */
+  pinnedServerCertSha256?: string
+  /** Request timeout in milliseconds. */
+  timeoutMs?: number
+  /** Maximum retry attempts for webhook delivery. */
+  maxAttempts?: number
 }
 
 /**
@@ -68,6 +78,8 @@ export interface WebhookDeliveryResult {
   attempts: number
   /** First 500 chars of response body on failure. */
   responseBodySnippet?: string
+  /** Error code for mTLS-specific failures. */
+  errorCode?: string
 }
 
 /**
