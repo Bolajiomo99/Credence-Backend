@@ -105,6 +105,14 @@ export const bulkVerificationBatchSize = new client.Histogram({
   registers: [register]
 })
 
+export const bulkQueueWaitSeconds = new client.Histogram({
+  name: 'bulk_queue_wait_seconds',
+  help: 'Time jobs spend waiting in the bulk verification queue',
+  labelNames: ['org_id'],
+  buckets: [0.5, 1, 2, 5, 10, 30, 60, 300],
+  registers: [register]
+})
+
 export const identitySyncDuration = new client.Histogram({
   name: 'identity_sync_duration_seconds',
   help: 'Duration of identity state sync operations',
