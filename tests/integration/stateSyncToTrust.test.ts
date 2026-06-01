@@ -12,17 +12,80 @@ vi.mock('../../src/db/pool.js', () => ({
   pool: {
     query: (text: string, params?: any[]) => db.pool.query(text, params),
     on: vi.fn(),
+  },
+  workerPool: {
+    query: (text: string, params?: any[]) => db.pool.query(text, params),
+    on: vi.fn(),
   }
 }))
 
-vi.mock('../../src/cache/index.js', () => ({
-  cache: {
-    get: (ns: string, k: string) => cache.client.get(`${ns}:${k}`).then(v => v ? JSON.parse(v) : null),
-    set: (ns: string, k: string, v: any, ttl?: number) => cache.client.set(`${ns}:${k}`, JSON.stringify(v)),
-    delete: (ns: string, k: string) => cache.client.del(`${ns}:${k}`),
-    deleteNS: (ns: string) => cache.client.flushAll(), // Close enough for test
+const sharedStorage = vi.hoisted(() => new Map<string, string>())
+
+vi.mock('../../src/cache/index.js', () => {
+  const mockClient = {
+    connect: async () => {},
+    get: async (key: string) => sharedStorage.get(key) ?? null,
+    set: async (key: string, value: string) => { sharedStorage.set(key, value); return 'OK' },
+    setEx: async (key: string, ttl: number, value: string) => { sharedStorage.set(key, value); return 'OK' },
+    del: async (key: string) => { const existed = sharedStorage.has(key); sharedStorage.delete(key); return existed ? 1 : 0 },
+    quit: async () => {},
+    disconnect: async () => {},
+    on: () => {},
+    isOpen: true,
+  } as any
+
+  const MockRedisConnection = {
+    getInstance: () => ({
+      connect: async () => {},
+      getClient: () => mockClient,
+      isOpen: true,
+    })
   }
-}))
+
+  return {
+    RedisConnection: MockRedisConnection,
+    redisConnection: MockRedisConnection.getInstance(),
+    cache: {
+      get: (ns: string, k: string) => mockClient.get(`${ns}:${k}`).then(v => v ? JSON.parse(v) : null),
+      set: (ns: string, k: string, v: any, ttl?: number) => mockClient.set(`${ns}:${k}`, JSON.stringify(v)),
+      delete: (ns: string, k: string) => mockClient.del(`${ns}:${k}`),
+      deleteNS: (ns: string) => { sharedStorage.clear() },
+    }
+  }
+})
+
+vi.mock('../../src/cache/redis.js', () => {
+  const mockClient = {
+    connect: async () => {},
+    get: async (key: string) => sharedStorage.get(key) ?? null,
+    set: async (key: string, value: string) => { sharedStorage.set(key, value); return 'OK' },
+    setEx: async (key: string, ttl: number, value: string) => { sharedStorage.set(key, value); return 'OK' },
+    del: async (key: string) => { const existed = sharedStorage.has(key); sharedStorage.delete(key); return existed ? 1 : 0 },
+    quit: async () => {},
+    disconnect: async () => {},
+    on: () => {},
+    isOpen: true,
+  } as any
+
+  const MockRedisConnection = {
+    getInstance: () => ({
+      connect: async () => {},
+      getClient: () => mockClient,
+      isOpen: true,
+    })
+  }
+
+  return {
+    RedisConnection: MockRedisConnection,
+    redisConnection: MockRedisConnection.getInstance(),
+    cache: {
+      get: (ns: string, k: string) => mockClient.get(`${ns}:${k}`).then(v => v ? JSON.parse(v) : null),
+      set: (ns: string, k: string, v: any, ttl?: number) => mockClient.set(`${ns}:${k}`, JSON.stringify(v)),
+      delete: (ns: string, k: string) => mockClient.del(`${ns}:${k}`),
+      deleteNS: (ns: string) => { sharedStorage.clear() },
+    }
+  }
+})
 
 // Mock Horizon Stream
 const streamState = {
@@ -44,11 +107,21 @@ vi.mock('@stellar/stellar-sdk', () => {
     }
   }
 
-  return { Horizon: { Server: ServerMock } }
+  const mockStrKey = {
+    isValidEd25519PublicKey: (account: string) => {
+      return typeof account === 'string' && account.startsWith('G') && account.length >= 56;
+    },
+    isValidMuxedAccount: () => false
+  }
+
+  return {
+    Horizon: { Server: ServerMock },
+    StrKey: mockStrKey
+  }
 })
 
 // We import app AFTER the mocks
-const { default: app } = await import('../../src/app.js')
+import app from '../../src/app.js'
 
 describe('E2E State Sync Integration: Horizon -> DB -> Trust -> Cache -> API', () => {
   beforeAll(async () => {
@@ -61,6 +134,7 @@ describe('E2E State Sync Integration: Horizon -> DB -> Trust -> Cache -> API', (
     process.env.REDIS_URL = cache.connectionString
     // Mock API key for middleware
     process.env.API_KEY = 'test-api-key'
+    process.env.JWT_SECRET = 'test-jwt-secret-at-least-32-chars-long'
 
     // 3. Run migrations on the test database
     if (db.connectionString.startsWith('pg-mem://')) {
@@ -94,7 +168,7 @@ describe('E2E State Sync Integration: Horizon -> DB -> Trust -> Cache -> API', (
   it('completes the full cycle: Horizon bond -> Sync -> Score -> Cache -> API', async () => {
     const { subscribeBondCreationEvents } = await import('../../src/listeners/horizonBondEvents.js')
     
-    const address = 'GD7XW6Q6V6O6V6O6V6O6V6O6V6O6V6O6V6O6V6O6V6O6V6O6V6O6V6O4'
+    const address = 'GD7XW6Q6V6O6V6O6V6O6V6O6V6O6V6O6V6O6V6O6V6O6V6O6V6O6V6O6'
     const bondId = 'bond_xyz'
     const amount = '1000000000000000000' // 1 ETH in wei
     const duration = '365'
@@ -127,7 +201,8 @@ describe('E2E State Sync Integration: Horizon -> DB -> Trust -> Cache -> API', (
     expect(response.body.score).toBeGreaterThan(0)
 
     // 4. Verify Cache
-    const cached = await cache.client.get(`trust:${address.toLowerCase()}`)
+    const { cache: appCache } = await import('../../src/cache/index.js')
+    const cached = await appCache.get('trust', address.toLowerCase())
     expect(cached).not.toBeNull()
   })
 
@@ -160,12 +235,13 @@ describe('E2E State Sync Integration: Horizon -> DB -> Trust -> Cache -> API', (
     expect(response.body.score).toBe(6) // (1/5) * 30
 
     // 4. Verify Cache status
-    const cached = await cache.client.get(`trust:${subject.toLowerCase()}`)
+    const { cache: appCache } = await import('../../src/cache/index.js')
+    const cached = await appCache.get('trust', subject.toLowerCase())
     expect(cached).not.toBeNull()
   })
 
   it('returns 404 for missing identity', async () => {
-    const response = await request(app).get('/api/trust/GD7XW6Q6V6O6V6O6V6O6V6O6V6O6V6O6V6O6V6O6V6O6V6O6V6O6V6O6')
+    const response = await request(app).get('/api/trust/GD7XW6Q6V6O6V6O6V6O6V6O6V6O6V6O6V6O6V6O6V6O6V6O6V6O6V6A7')
     expect(response.status).toBe(404)
   })
 })

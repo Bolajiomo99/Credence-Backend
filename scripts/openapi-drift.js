@@ -18,10 +18,11 @@ function getRegisteredRoutes() {
   const routes = [
     { path: '/.well-known/jwks.json', method: 'get' },
     { path: '/api/health', method: 'get' },
-    { path: '/api/trust', method: 'get' },
+    { path: '/api/trust/:address', method: 'get' },
     { path: '/api/trust', method: 'post' },
-    { path: '/api/bond', method: 'get' },
+    { path: '/api/bond/:address', method: 'get' },
     { path: '/api/bond', method: 'post' },
+    { path: '/api/attestations/:address', method: 'get' },
     { path: '/api/attestations', method: 'post' },
     { path: '/api/bulk', method: 'post' },
     { path: '/api/imports', method: 'post' },
@@ -30,6 +31,10 @@ function getRegisteredRoutes() {
     { path: '/api/payouts', method: 'post' },
   ];
   return routes.filter(r => !isAdminRoute(r.path));
+}
+
+function normalizePath(p) {
+  return p.replace(/\{([^}]+)\}/g, ':$1');
 }
 
 function parsePathsFromYaml(yamlContent) {
@@ -45,7 +50,7 @@ function parsePathsFromYaml(yamlContent) {
       continue;
     }
     if (inPaths && trimmed.startsWith('/') && trimmed.endsWith(':')) {
-      currentPath = trimmed.slice(0, -1);
+      currentPath = normalizePath(trimmed.slice(0, -1));
       paths[currentPath] = {};
     } else if (inPaths && currentPath && (trimmed.startsWith('get:') || trimmed.startsWith('post:') || trimmed.startsWith('put:') || trimmed.startsWith('delete:') || trimmed.startsWith('patch:'))) {
       const method = trimmed.split(':')[0].toLowerCase();

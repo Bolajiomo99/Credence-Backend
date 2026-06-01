@@ -12,7 +12,7 @@ import { Request, Response, NextFunction } from 'express'
  * - Cross-Origin Resource Policy
  * - Per-route override capability via res.locals
  */
-export const securityHeadersMiddleware = helmet({
+const getSecurityHeadersMiddleware = () => helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
@@ -50,6 +50,21 @@ export const securityHeadersMiddleware = helmet({
   permittedCrossDomainPolicies: false,
   xssFilter: false, // Deprecated in favor of CSP
 })
+
+let cachedMiddleware: any = null
+let lastEnv: string | undefined = undefined
+
+export const securityHeadersMiddleware = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  if (!cachedMiddleware || lastEnv !== process.env.NODE_ENV) {
+    lastEnv = process.env.NODE_ENV
+    cachedMiddleware = getSecurityHeadersMiddleware()
+  }
+  return cachedMiddleware(req, res, next)
+}
 
 /**
  * Middleware to allow per-route override of security headers.

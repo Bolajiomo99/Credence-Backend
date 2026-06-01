@@ -38,6 +38,10 @@ vi.mock("@stellar/stellar-sdk", () => {
         };
       }),
     },
+    StrKey: {
+      isValidEd25519PublicKey: (account: string) => typeof account === 'string' && account.startsWith('G'),
+      isValidMuxedAccount: () => false,
+    },
   };
 });
 

@@ -367,7 +367,6 @@ describe('Rate Limit Middleware', () => {
       
       spyIncr.mockRestore()
     })
-  })
 
     it('should return 503 when Redis throws and failOpen is false', async () => {
       const spyIncr = vi.spyOn(mockRedis, 'incr').mockRejectedValue(new Error('Redis down'))

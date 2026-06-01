@@ -4,7 +4,7 @@ import path from 'path';
 
 describe('OpenAPI Contract Drift', () => {
   it('should pass when routes and spec are in sync', () => {
-    const result = execSync('npx tsx scripts/openapi-drift.ts', {
+    const result = execSync('node scripts/openapi-drift.js', {
       cwd: path.resolve(__dirname, '../..'),
       encoding: 'utf-8',
       stdio: 'pipe',
