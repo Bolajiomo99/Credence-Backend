@@ -195,16 +195,25 @@ groups:
             Worker pool has {{ $value }} jobs queued waiting for a
             connection for >5 minutes.
 
-      # Stale advisory lock held longer than expected
-      - alert: StaleAdvisoryLockDetected
-        expr: pg_advisory_lock_age_seconds > 300
-        for: 5m
+      # Soroban circuit breaker open
+      - alert: SorobanCircuitBreakerOpen
+        expr: soroban_circuit_state == 1
+        for: 2m
         labels:
-          severity: warning
+          severity: critical
           service: credence-backend
         annotations:
-          summary: "Stale PostgreSQL advisory lock held longer than 5 minutes"
-          description: >-
-            Advisory lock {{ $labels.lock_id }} has been held for {{ $value }}s
-            by pid {{ $labels.pid }}. Investigate the holding session and
-            avoid killing the session without review.
+          summary: "Soroban circuit breaker is OPEN for {{ $labels.host }}"
+          description: "Soroban circuit breaker for host {{ $labels.host }} has been OPEN for more than 2 minutes."
+
+      # Settlement drift detected
+      - alert: SettlementDriftDetected
+        expr: sum(increase(settlement_drift_total[5m])) > 0
+        for: 2m
+        labels:
+          severity: critical
+          service: credence-backend
+        annotations:
+          summary: "Settlement drift detected between internal DB and Stellar network"
+          description: "Reconciliation detected mismatch between internal settlements and chain transactions: {{ $value }} drifts detected."
+
