@@ -12,6 +12,8 @@ import { AnalyticsService } from './services/analytics/service.js'
 import { AnalyticsRefreshWorker, getAnalyticsRefreshIntervalMs } from './jobs/analyticsRefreshWorker.js'
 import { AnalyticsRefreshScheduler } from './jobs/analyticsRefreshScheduler.js'
 import { createAnalyticsRefreshMetrics } from './jobs/analyticsRefreshMetrics.js'
+import { SettlementReconciler } from './jobs/settlementReconciler.js'
+import { createScheduler } from './jobs/scheduler.js'
 import { keyManager } from './services/keyManager/index.js'
 import { GracefulShutdownManager } from './gracefulShutdown.js'
 
@@ -72,14 +74,30 @@ if (process.env.NODE_ENV !== 'test') {
       const refreshWorker = new AnalyticsRefreshWorker(analyticsService, console.log, metrics)
       const intervalMs = getAnalyticsRefreshIntervalMs()
 
-      scheduler = new AnalyticsRefreshScheduler(refreshWorker, {
+      const refreshScheduler = new AnalyticsRefreshScheduler(refreshWorker, {
         intervalMs,
         runOnStart: true,
         logger: console.log,
         metrics,
       })
 
-      scheduler.start()
+      const reconcilerJob = new SettlementReconciler(pool)
+      const reconcilerScheduler = createScheduler(reconcilerJob, {
+        cronExpression: '0 * * * *', // hourly
+        runOnStart: false,
+        logger: console.log,
+        lockKey: 'cron:settlement-reconciliation'
+      })
+
+      refreshScheduler.start()
+      reconcilerScheduler.start()
+
+      scheduler = {
+        stop() {
+          refreshScheduler.stop()
+          reconcilerScheduler.stop()
+        }
+      } as any
     }
 
     // Start Outbox Publisher job if enabled

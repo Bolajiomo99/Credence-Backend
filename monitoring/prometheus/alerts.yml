@@ -165,3 +165,14 @@ groups:
           summary: "Soroban circuit breaker is OPEN for {{ $labels.host }}"
           description: "Soroban circuit breaker for host {{ $labels.host }} has been OPEN for more than 2 minutes."
 
+      # Settlement drift detected
+      - alert: SettlementDriftDetected
+        expr: sum(increase(settlement_drift_total[5m])) > 0
+        for: 2m
+        labels:
+          severity: critical
+          service: credence-backend
+        annotations:
+          summary: "Settlement drift detected between internal DB and Stellar network"
+          description: "Reconciliation detected mismatch between internal settlements and chain transactions: {{ $value }} drifts detected."
+

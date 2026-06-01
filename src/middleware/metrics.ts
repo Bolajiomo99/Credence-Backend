@@ -11,7 +11,7 @@
 
 import { Request, Response, NextFunction } from 'express'
 import client from 'prom-client'
-import { registerLatencyMetrics } from '../observability/latencyMetrics.js'
+import { registerLatencyMetrics, httpRequestDurationHistogram, httpRequestStatusTotal, normalizeRoute } from '../observability/latencyMetrics.js'
 import { registerPoolMetrics } from '../observability/index.js'
 import { pool, workerPool } from '../db/pool.js'
 
@@ -149,6 +149,13 @@ export const idempotencyDuplicatesDetected = new client.Counter({
 export const settlementDuplicatesDetected = new client.Counter({
   name: 'settlement_duplicates_detected_total',
   help: 'Total number of settlement duplicates detected and collapsed via transaction_hash idempotency',
+  registers: [register]
+})
+
+export const settlementDriftTotal = new client.Counter({
+  name: 'settlement_drift_total',
+  help: 'Total number of settlement reconciliation drifts detected',
+  labelNames: ['finding_type'],
   registers: [register]
 })
 
@@ -334,6 +341,20 @@ export function recordStaleCacheRead(namespace: string) {
  */
 export function recordSettlementDuplicate() {
   settlementDuplicatesDetected.inc()
+}
+
+/**
+ * Record settlement reconciliation drift
+ * 
+ * Usage:
+ * ```typescript
+ * import { recordSettlementDrift } from './middleware/metrics.js'
+ * 
+ * recordSettlementDrift('state_mismatch')
+ * ```
+ */
+export function recordSettlementDrift(findingType: 'state_mismatch' | 'missing_on_chain') {
+  settlementDriftTotal.inc({ finding_type: findingType })
 }
 
 /**
