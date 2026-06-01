@@ -26,7 +26,9 @@ export default defineConfig({
         "src/**/*.d.ts",
         "src/**/types.ts",
         // Re-export barrel files – all they do is re-export
-        "src/**/index.ts",
+        'src/**/index.ts',
+        // Generated SDK artifacts are validated via parity tests
+        'src/sdk/errors.generated.ts',
         // Infrastructure utilities that require live dependencies
         "src/utils/**",
       ],
@@ -35,6 +37,12 @@ export default defineConfig({
         branches: 40,
         functions: 40,
         lines: 40,
+        'src/sdk/**': {
+          statements: 95,
+          branches: 95,
+          functions: 95,
+          lines: 95,
+        },
       },
     },
   },
