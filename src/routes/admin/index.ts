@@ -416,4 +416,6 @@ export function createAdminRouter(): Router {
       next(error);
     }
   });
+
+  return router
 }

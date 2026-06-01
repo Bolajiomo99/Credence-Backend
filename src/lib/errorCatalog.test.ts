@@ -45,7 +45,9 @@ const STABLE_ERROR_CODE_CONTRACT = Object.freeze([
   'service_unavailable',
 ] as const)
 
-const activeCodes = (): string[] => Object.values(ERROR_CATALOG).map((entry) => entry.code)
+const activeCodes = (): string[] => Object.values(ERROR_CATALOG)
+  .filter((entry) => entry.kind === 'api')
+  .map((entry) => entry.code)
 
 const withNodeEnv = async <T>(nodeEnv: string, fn: () => Promise<T>): Promise<T> => {
   const original = process.env.NODE_ENV

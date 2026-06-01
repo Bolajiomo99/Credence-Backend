@@ -23,23 +23,23 @@ export interface SanitizedErrorCause {
 
 const DEFAULT_MESSAGES = {
   'validation_failed': "Validation failed",
-  'field_required': "Required field is missing",
-  'invalid_format': "Invalid format",
-  'invalid_address': "Invalid address",
-  'invalid_type': "Invalid type",
-  'unexpected_field': "Unexpected field",
-  'value_too_small': "Value is too small",
-  'value_too_large': "Value is too large",
-  'insufficient_funds': "Insufficient funds",
-  'unauthorized': "Unauthorized access",
-  'forbidden': "Forbidden access",
-  'not_found': "Resource not found",
-  'conflict': "Conflict",
-  'batch_size_exceeded': "Batch size exceeded",
-  'batch_size_too_small': "Batch size too small",
+  'field_required': "A required field is missing",
+  'invalid_format': "The request contains a field with an invalid format",
+  'invalid_address': "The request contains an invalid address",
+  'value_too_small': "The request contains a value below the allowed minimum",
+  'value_too_large': "The request contains a value above the allowed maximum",
+  'unexpected_field': "The request contains an unexpected field",
+  'invalid_type': "The request contains a field with an invalid type",
+  'batch_size_too_small': "The batch size is below the allowed minimum",
+  'batch_size_exceeded': "The batch size exceeds the allowed maximum",
+  'unauthorized': "Authentication is required",
+  'forbidden': "The authenticated caller is not allowed to perform this action",
+  'not_found': "The requested resource was not found",
+  'conflict': "The request conflicts with the current resource state",
+  'insufficient_funds': "The account has insufficient funds for this operation",
   'rate_limit_exceeded': "Rate limit exceeded",
-  'service_unavailable': "Service temporarily unavailable",
   'internal_server_error': "An unexpected internal server error occurred",
+  'service_unavailable': "Service temporarily unavailable",
   'invalid_input': "Invalid input",
   'sdk_request_timeout': "Request timed out",
   'sdk_network_error': "Network error",
@@ -141,7 +141,7 @@ export class FieldRequiredCredenceError extends CredenceError {
 
   constructor(
     message: string = DEFAULT_MESSAGES['field_required'],
-    status: number,
+    status: number = 400,
     details?: unknown,
     options?: CredenceErrorOptions,
   ) {
@@ -155,7 +155,7 @@ export class InvalidFormatCredenceError extends CredenceError {
 
   constructor(
     message: string = DEFAULT_MESSAGES['invalid_format'],
-    status: number,
+    status: number = 400,
     details?: unknown,
     options?: CredenceErrorOptions,
   ) {
@@ -169,7 +169,7 @@ export class InvalidAddressCredenceError extends CredenceError {
 
   constructor(
     message: string = DEFAULT_MESSAGES['invalid_address'],
-    status: number,
+    status: number = 400,
     details?: unknown,
     options?: CredenceErrorOptions,
   ) {
@@ -178,40 +178,12 @@ export class InvalidAddressCredenceError extends CredenceError {
   }
 }
 
-export class InvalidTypeCredenceError extends CredenceError {
-  static readonly errorCode = 'invalid_type' as const
-
-  constructor(
-    message: string = DEFAULT_MESSAGES['invalid_type'],
-    status: number,
-    details?: unknown,
-    options?: CredenceErrorOptions,
-  ) {
-    super(message, 'invalid_type', status, details, options)
-    this.name = 'InvalidTypeCredenceError'
-  }
-}
-
-export class UnexpectedFieldCredenceError extends CredenceError {
-  static readonly errorCode = 'unexpected_field' as const
-
-  constructor(
-    message: string = DEFAULT_MESSAGES['unexpected_field'],
-    status: number,
-    details?: unknown,
-    options?: CredenceErrorOptions,
-  ) {
-    super(message, 'unexpected_field', status, details, options)
-    this.name = 'UnexpectedFieldCredenceError'
-  }
-}
-
 export class ValueTooSmallCredenceError extends CredenceError {
   static readonly errorCode = 'value_too_small' as const
 
   constructor(
     message: string = DEFAULT_MESSAGES['value_too_small'],
-    status: number,
+    status: number = 400,
     details?: unknown,
     options?: CredenceErrorOptions,
   ) {
@@ -225,7 +197,7 @@ export class ValueTooLargeCredenceError extends CredenceError {
 
   constructor(
     message: string = DEFAULT_MESSAGES['value_too_large'],
-    status: number,
+    status: number = 400,
     details?: unknown,
     options?: CredenceErrorOptions,
   ) {
@@ -234,17 +206,59 @@ export class ValueTooLargeCredenceError extends CredenceError {
   }
 }
 
-export class InsufficientFundsCredenceError extends CredenceError {
-  static readonly errorCode = 'insufficient_funds' as const
+export class UnexpectedFieldCredenceError extends CredenceError {
+  static readonly errorCode = 'unexpected_field' as const
 
   constructor(
-    message: string = DEFAULT_MESSAGES['insufficient_funds'],
-    status: number = 422,
+    message: string = DEFAULT_MESSAGES['unexpected_field'],
+    status: number = 400,
     details?: unknown,
     options?: CredenceErrorOptions,
   ) {
-    super(message, 'insufficient_funds', status, details, options)
-    this.name = 'InsufficientFundsCredenceError'
+    super(message, 'unexpected_field', status, details, options)
+    this.name = 'UnexpectedFieldCredenceError'
+  }
+}
+
+export class InvalidTypeCredenceError extends CredenceError {
+  static readonly errorCode = 'invalid_type' as const
+
+  constructor(
+    message: string = DEFAULT_MESSAGES['invalid_type'],
+    status: number = 400,
+    details?: unknown,
+    options?: CredenceErrorOptions,
+  ) {
+    super(message, 'invalid_type', status, details, options)
+    this.name = 'InvalidTypeCredenceError'
+  }
+}
+
+export class BatchSizeTooSmallCredenceError extends CredenceError {
+  static readonly errorCode = 'batch_size_too_small' as const
+
+  constructor(
+    message: string = DEFAULT_MESSAGES['batch_size_too_small'],
+    status: number = 400,
+    details?: unknown,
+    options?: CredenceErrorOptions,
+  ) {
+    super(message, 'batch_size_too_small', status, details, options)
+    this.name = 'BatchSizeTooSmallCredenceError'
+  }
+}
+
+export class BatchSizeExceededCredenceError extends CredenceError {
+  static readonly errorCode = 'batch_size_exceeded' as const
+
+  constructor(
+    message: string = DEFAULT_MESSAGES['batch_size_exceeded'],
+    status: number = 413,
+    details?: unknown,
+    options?: CredenceErrorOptions,
+  ) {
+    super(message, 'batch_size_exceeded', status, details, options)
+    this.name = 'BatchSizeExceededCredenceError'
   }
 }
 
@@ -304,31 +318,17 @@ export class ConflictCredenceError extends CredenceError {
   }
 }
 
-export class BatchSizeExceededCredenceError extends CredenceError {
-  static readonly errorCode = 'batch_size_exceeded' as const
+export class InsufficientFundsCredenceError extends CredenceError {
+  static readonly errorCode = 'insufficient_funds' as const
 
   constructor(
-    message: string = DEFAULT_MESSAGES['batch_size_exceeded'],
-    status: number = 400,
+    message: string = DEFAULT_MESSAGES['insufficient_funds'],
+    status: number = 422,
     details?: unknown,
     options?: CredenceErrorOptions,
   ) {
-    super(message, 'batch_size_exceeded', status, details, options)
-    this.name = 'BatchSizeExceededCredenceError'
-  }
-}
-
-export class BatchSizeTooSmallCredenceError extends CredenceError {
-  static readonly errorCode = 'batch_size_too_small' as const
-
-  constructor(
-    message: string = DEFAULT_MESSAGES['batch_size_too_small'],
-    status: number = 400,
-    details?: unknown,
-    options?: CredenceErrorOptions,
-  ) {
-    super(message, 'batch_size_too_small', status, details, options)
-    this.name = 'BatchSizeTooSmallCredenceError'
+    super(message, 'insufficient_funds', status, details, options)
+    this.name = 'InsufficientFundsCredenceError'
   }
 }
 
@@ -346,20 +346,6 @@ export class RateLimitExceededCredenceError extends CredenceError {
   }
 }
 
-export class ServiceUnavailableCredenceError extends CredenceError {
-  static readonly errorCode = 'service_unavailable' as const
-
-  constructor(
-    message: string = DEFAULT_MESSAGES['service_unavailable'],
-    status: number = 503,
-    details?: unknown,
-    options?: CredenceErrorOptions,
-  ) {
-    super(message, 'service_unavailable', status, details, options)
-    this.name = 'ServiceUnavailableCredenceError'
-  }
-}
-
 export class InternalServerErrorCredenceError extends CredenceError {
   static readonly errorCode = 'internal_server_error' as const
 
@@ -371,6 +357,20 @@ export class InternalServerErrorCredenceError extends CredenceError {
   ) {
     super(message, 'internal_server_error', status, details, options)
     this.name = 'InternalServerErrorCredenceError'
+  }
+}
+
+export class ServiceUnavailableCredenceError extends CredenceError {
+  static readonly errorCode = 'service_unavailable' as const
+
+  constructor(
+    message: string = DEFAULT_MESSAGES['service_unavailable'],
+    status: number = 503,
+    details?: unknown,
+    options?: CredenceErrorOptions,
+  ) {
+    super(message, 'service_unavailable', status, details, options)
+    this.name = 'ServiceUnavailableCredenceError'
   }
 }
 
@@ -452,20 +452,20 @@ export const CREDENCE_ERROR_REGISTRY = {
   'field_required': FieldRequiredCredenceError,
   'invalid_format': InvalidFormatCredenceError,
   'invalid_address': InvalidAddressCredenceError,
-  'invalid_type': InvalidTypeCredenceError,
-  'unexpected_field': UnexpectedFieldCredenceError,
   'value_too_small': ValueTooSmallCredenceError,
   'value_too_large': ValueTooLargeCredenceError,
-  'insufficient_funds': InsufficientFundsCredenceError,
+  'unexpected_field': UnexpectedFieldCredenceError,
+  'invalid_type': InvalidTypeCredenceError,
+  'batch_size_too_small': BatchSizeTooSmallCredenceError,
+  'batch_size_exceeded': BatchSizeExceededCredenceError,
   'unauthorized': UnauthorizedCredenceError,
   'forbidden': ForbiddenCredenceError,
   'not_found': NotFoundCredenceError,
   'conflict': ConflictCredenceError,
-  'batch_size_exceeded': BatchSizeExceededCredenceError,
-  'batch_size_too_small': BatchSizeTooSmallCredenceError,
+  'insufficient_funds': InsufficientFundsCredenceError,
   'rate_limit_exceeded': RateLimitExceededCredenceError,
-  'service_unavailable': ServiceUnavailableCredenceError,
   'internal_server_error': InternalServerErrorCredenceError,
+  'service_unavailable': ServiceUnavailableCredenceError,
   'invalid_input': InvalidInputCredenceError,
   'sdk_request_timeout': SdkRequestTimeoutCredenceError,
   'sdk_network_error': SdkNetworkErrorCredenceError,

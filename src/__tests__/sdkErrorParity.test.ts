@@ -7,6 +7,7 @@ import {
   ERROR_CATALOG_CODES,
   API_ERROR_CATALOG_CODES,
   TRANSPORT_ERROR_CATALOG_CODES,
+  ERROR_CATALOG_BY_CODE,
   getCatalogEntry,
   getUnmappedHttpFallbackEntry,
 } from '../lib/errorCatalog.js'
@@ -44,7 +45,7 @@ describe('SDK error catalog parity', () => {
 
   it('maps every generated registry entry back to the catalog', () => {
     for (const code of CREDENCE_ERROR_CODES) {
-      expect(ERROR_CATALOG[code as keyof typeof ERROR_CATALOG]).toBeDefined()
+      expect(ERROR_CATALOG_BY_CODE[code as any]).toBeDefined()
     }
   })
 

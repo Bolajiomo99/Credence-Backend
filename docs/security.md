@@ -146,3 +146,49 @@ The catch-block fallback in `src/app.ts` also derives `failOpen` from `NODE_ENV`
   - Review CI configuration to ensure no secrets leak in future releases.
 
 For more details see the [Gitleaks documentation](https://github.com/gitleaks/gitleaks).
+
+---
+
+## Dependency Vulnerability Scanning & SLAs
+
+To ensure a secure supply chain, the platform automatically scans third-party dependencies for known Common Vulnerabilities and Exposures (CVEs) and enforces strict response time Service Level Agreements (SLAs).
+
+### Scanning Architecture
+
+Vulnerability scanning is orchestrated in `.github/workflows/vuln-scan.yml` and is triggered on every Pull Request targeting `main`/`develop` as well as on a **nightly cron schedule** (at 00:00 UTC).
+
+The pipeline runs two complementary scanning engines:
+1. **`npm audit` (Production-only)**: Focused specifically on production runtime dependencies (`npm audit --omit=dev`), ensuring that development tools (like local compilers or test libraries) do not block release workflows unless they present runtime risk.
+2. **Trivy SBOM Scan (`trivy fs .`)**: Conducts a complete filesystem-level static security scan across all packages, lockfiles, and configuration declarations.
+
+A custom-built, fully unit-tested severity gate engine (`scripts/security-gate.ts`) parses the output of both tools. If any vulnerability is found matching or exceeding the configured severity threshold (default is **HIGH**), the script prints the offending advisory details and exits with `1`, **failing the build**.
+
+### Response SLA Matrix
+
+Vulnerabilities discovered in production dependencies must be triaged, patched, and resolved according to the following strict SLA timeline:
+
+| Severity Level | Definition | SLA for Resolution / Mitigation | Enforced CI Gate |
+| :--- | :--- | :--- | :--- |
+| **SEV1 (Critical & High)** | CVEs classified as High or Critical (CVSS $\ge 7.0$). Poses immediate risk of exposure, data leak, or compromise. | **Within 24 Hours** from detection. | Yes (Blocks build immediately) |
+| **SEV2 (Medium / Moderate)** | CVEs classified as Medium or Moderate (CVSS $4.0 - 6.9$). Lower exploitability or limited impact. | **Within 7 Days** from detection. | Alerting / Policy Warning |
+| **SEV3 (Low)** | CVEs classified as Low (CVSS $< 4.0$) or located in development-only dependencies. | Best effort (Targeted in next minor/patch release). | No |
+
+### Auto-PR Grouping & Renovate Configuration
+
+Dependency updates are automated using **Renovate** (`renovate.json`). Security patches and upgrades are automatically generated and grouped by ecosystem to prevent PR fatigue:
+* **`npm-ecosystem-updates`**: Groups all JavaScript/TypeScript runtime and dev package updates.
+* **`github-actions-updates`**: Groups GitHub Actions workflow updates.
+* **`docker-ecosystem-updates`**: Groups base image updates for Dockerfiles and Compose configurations.
+
+> [!IMPORTANT]
+> **Manual Human Review Gate**: Renovate is strictly configured to **never auto-merge major version upgrades** (`automerge: false`). All major dependency upgrades require developer triage, comprehensive integration test suite passes, and peer approval to protect against breaking API changes and supply chain injection.
+
+### Handling False Positives, Ignored CVEs & Overrides
+
+When an upstream dependency contains a vulnerability that cannot be immediately patched (e.g., no patch version is available yet) or represents a confirmed false positive that is non-exploitable in our architecture:
+1. Conduct an impact assessment with security owners.
+2. If approved, add the package or specific CVE ID to the ignore allowlist in the pipeline:
+   ```bash
+   npx tsx scripts/security-gate.ts --file audit-report.json --threshold high --ignore-cve CVE-YYYY-XXXXX --ignore-pkg package-name
+   ```
+3. Document the bypass justification, the expiration date of the exception, and the signed security ticket reference in the commit message and PR description.

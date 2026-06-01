@@ -20,11 +20,17 @@ const formatEntryRow = (entry: ErrorCatalogEntry): string => [
   escapeMarkdown(entry.defaultMessage),
 ].join(' | ')
 
-const activeEntries = Object.values(ERROR_CATALOG).sort((a, b) => {
-  if (a.category !== b.category) return a.category.localeCompare(b.category)
-  if (a.httpStatus !== b.httpStatus) return a.httpStatus - b.httpStatus
-  return a.code.localeCompare(b.code)
-})
+const activeEntries = Object.values(ERROR_CATALOG)
+  .filter((entry) => entry.kind === 'api')
+  .sort((a, b) => {
+    const catA = a.category ?? ''
+    const catB = b.category ?? ''
+    if (catA !== catB) return catA.localeCompare(catB)
+    const statusA = a.httpStatus ?? 0
+    const statusB = b.httpStatus ?? 0
+    if (statusA !== statusB) return statusA - statusB
+    return a.code.localeCompare(b.code)
+  })
 
 const deprecatedEntries = Object.values(ERROR_CODE_DEPRECATIONS).sort((a, b) =>
   a.code.localeCompare(b.code)
