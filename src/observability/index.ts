@@ -4,7 +4,8 @@
 
 export {
   normalizeRoute,
-  httpLatencyPercentiles,
+  httpRequestDurationHistogram,
+  httpRequestStatusTotal,
   registerLatencyMetrics,
 } from './latencyMetrics.js'
 
@@ -29,5 +30,4 @@ export {
   incrementOutboxFailed,
   setOutboxPendingGauge,
   incrementOutboxLeaseRenew,
-  incrementOutboxQuarantine,
 } from './outboxMetrics.js'

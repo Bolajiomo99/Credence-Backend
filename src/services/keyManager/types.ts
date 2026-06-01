@@ -1,4 +1,6 @@
-import type { KeyLike } from 'jose'
+import type { KeyObject } from 'node:crypto'
+
+export type KeyLike = CryptoKey | KeyObject
 
 export type KeyState = 'active' | 'retired'
 

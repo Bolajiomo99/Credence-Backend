@@ -1,4 +1,6 @@
 import * as crypto from 'crypto'
+import { randomUUID } from 'crypto'
+import { IdentityService } from './identityService.js'
 
 import type {
   AttestationSummary,
@@ -11,6 +13,33 @@ import type {
  * Service for building and signing verification proof packages
  */
 export class VerificationService {
+
+  /**
+   * Verify a list of addresses in configurable chunks.
+   */
+  async verifyBulkChunked(addresses: string[], chunkSize = 100): Promise<{ results: unknown[]; errors: unknown[] }> {
+    const identityService = new IdentityService()
+    const results: unknown[] = []
+    const errors: unknown[] = []
+
+    for (let i = 0; i < addresses.length; i += chunkSize) {
+      const chunk = addresses.slice(i, i + chunkSize)
+      const chunkResult = await identityService.verifyBulk(chunk)
+      results.push(...chunkResult.results)
+      errors.push(...chunkResult.errors)
+    }
+
+    return { results, errors }
+  }
+
+  /**
+   * Enqueue asynchronous bulk verification. Placeholder implementation returns a stable job id.
+   */
+  async enqueueBulkVerification(addresses: string[]): Promise<string> {
+    void addresses
+    return `bulk_${randomUUID()}`
+  }
+
   /**
    * Build a canonical JSON string for hashing
    */

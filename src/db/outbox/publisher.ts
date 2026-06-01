@@ -407,6 +407,7 @@ export class OutboxPublisher {
     processing: number
     published: number
     failed: number
+    dead_letter: number
   }> {
     return this.repository.getStats(pool)
   }

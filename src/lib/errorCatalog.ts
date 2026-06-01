@@ -1,220 +1,215 @@
-import { ErrorCode } from './errors.js'
-
 /**
- * Structured metadata for the backend error_code registry.
- * Source of truth for SDK error class generation (`scripts/generate-sdk-errors.ts`).
+ * Central registry for public API error codes.
+ *
+ * Error codes are a consumer-facing contract. Add new codes freely, but do not
+ * remove or rename an existing code without adding an entry to
+ * ERROR_CODE_DEPRECATIONS and documenting the migration path.
  */
-export type ErrorCatalogKind = 'api' | 'transport'
+export type ErrorCategory =
+  | 'validation'
+  | 'authentication'
+  | 'authorization'
+  | 'resource'
+  | 'business'
+  | 'rate_limit'
+  | 'system'
 
 export interface ErrorCatalogEntry {
-  /** Wire value returned in API envelopes (`code` field). */
-  code: string
-  /** Generated SDK class name (must be unique). */
-  sdkClassName: string
-  /** `api` = backend JSON envelope; `transport` = client-side only. */
-  kind: ErrorCatalogKind
-  /** Default HTTP status when thrown as AppError (`null` for transport-only). */
-  httpStatus: number | null
-  /** Human-readable default message for SDK fallbacks. */
-  defaultMessage: string
-  /** Still generated and mapped, but marked @deprecated in SDK output. */
-  deprecated?: boolean
-  /** Replacement wire code when deprecated. */
-  replacedBy?: string
-  /** Fallback when HTTP status/body cannot be mapped to a known api code. */
-  unmappedHttpFallback?: boolean
+  readonly code: string
+  readonly httpStatus: number
+  readonly defaultMessage: string
+  readonly category: ErrorCategory
 }
 
-export const ERROR_CATALOG = {
-  [ErrorCode.VALIDATION_FAILED]: {
-    code: ErrorCode.VALIDATION_FAILED,
-    sdkClassName: 'ValidationFailedCredenceError',
-    kind: 'api',
+export interface ErrorCodeDeprecation {
+  /** Deprecated machine-readable code string. */
+  readonly code: string
+  /** ISO date (YYYY-MM-DD) when deprecation was announced. */
+  readonly deprecatedSince: string
+  /** Replacement active code, when one exists. */
+  readonly replacement?: ErrorCode
+  /** Human-readable migration note. */
+  readonly reason: string
+}
+
+const freezeCatalog = <T extends Record<string, ErrorCatalogEntry>>(catalog: T): Readonly<T> => {
+  for (const entry of Object.values(catalog)) {
+    Object.freeze(entry)
+  }
+  return Object.freeze(catalog)
+}
+
+/**
+ * Stable active error-code catalog.
+ *
+ * Keys are TypeScript-friendly constants; `code` values are the wire-format
+ * strings sent as `error_code`/`code` in API responses.
+ */
+export const ERROR_CATALOG = freezeCatalog({
+  VALIDATION_FAILED: {
+    code: 'validation_failed',
     httpStatus: 400,
     defaultMessage: 'Validation failed',
+    category: 'validation',
   },
-  [ErrorCode.FIELD_REQUIRED]: {
-    code: ErrorCode.FIELD_REQUIRED,
-    sdkClassName: 'FieldRequiredCredenceError',
-    kind: 'api',
-    httpStatus: null,
-    defaultMessage: 'Required field is missing',
+  FIELD_REQUIRED: {
+    code: 'field_required',
+    httpStatus: 400,
+    defaultMessage: 'A required field is missing',
+    category: 'validation',
   },
-  [ErrorCode.INVALID_FORMAT]: {
-    code: ErrorCode.INVALID_FORMAT,
-    sdkClassName: 'InvalidFormatCredenceError',
-    kind: 'api',
-    httpStatus: null,
-    defaultMessage: 'Invalid format',
+  INVALID_FORMAT: {
+    code: 'invalid_format',
+    httpStatus: 400,
+    defaultMessage: 'The request contains a field with an invalid format',
+    category: 'validation',
   },
-  [ErrorCode.INVALID_ADDRESS]: {
-    code: ErrorCode.INVALID_ADDRESS,
-    sdkClassName: 'InvalidAddressCredenceError',
-    kind: 'api',
-    httpStatus: null,
-    defaultMessage: 'Invalid address',
+  INVALID_ADDRESS: {
+    code: 'invalid_address',
+    httpStatus: 400,
+    defaultMessage: 'The request contains an invalid address',
+    category: 'validation',
   },
-  [ErrorCode.INVALID_TYPE]: {
-    code: ErrorCode.INVALID_TYPE,
-    sdkClassName: 'InvalidTypeCredenceError',
-    kind: 'api',
-    httpStatus: null,
-    defaultMessage: 'Invalid type',
+  VALUE_TOO_SMALL: {
+    code: 'value_too_small',
+    httpStatus: 400,
+    defaultMessage: 'The request contains a value below the allowed minimum',
+    category: 'validation',
   },
-  [ErrorCode.UNEXPECTED_FIELD]: {
-    code: ErrorCode.UNEXPECTED_FIELD,
-    sdkClassName: 'UnexpectedFieldCredenceError',
-    kind: 'api',
-    httpStatus: null,
-    defaultMessage: 'Unexpected field',
+  VALUE_TOO_LARGE: {
+    code: 'value_too_large',
+    httpStatus: 400,
+    defaultMessage: 'The request contains a value above the allowed maximum',
+    category: 'validation',
   },
-  [ErrorCode.VALUE_TOO_SMALL]: {
-    code: ErrorCode.VALUE_TOO_SMALL,
-    sdkClassName: 'ValueTooSmallCredenceError',
-    kind: 'api',
-    httpStatus: null,
-    defaultMessage: 'Value is too small',
+  UNEXPECTED_FIELD: {
+    code: 'unexpected_field',
+    httpStatus: 400,
+    defaultMessage: 'The request contains an unexpected field',
+    category: 'validation',
   },
-  [ErrorCode.VALUE_TOO_LARGE]: {
-    code: ErrorCode.VALUE_TOO_LARGE,
-    sdkClassName: 'ValueTooLargeCredenceError',
-    kind: 'api',
-    httpStatus: null,
-    defaultMessage: 'Value is too large',
+  INVALID_TYPE: {
+    code: 'invalid_type',
+    httpStatus: 400,
+    defaultMessage: 'The request contains a field with an invalid type',
+    category: 'validation',
   },
-  [ErrorCode.INSUFFICIENT_FUNDS]: {
-    code: ErrorCode.INSUFFICIENT_FUNDS,
-    sdkClassName: 'InsufficientFundsCredenceError',
-    kind: 'api',
-    httpStatus: 422,
-    defaultMessage: 'Insufficient funds',
+  BATCH_SIZE_TOO_SMALL: {
+    code: 'batch_size_too_small',
+    httpStatus: 400,
+    defaultMessage: 'The batch size is below the allowed minimum',
+    category: 'validation',
   },
-  [ErrorCode.UNAUTHORIZED]: {
-    code: ErrorCode.UNAUTHORIZED,
-    sdkClassName: 'UnauthorizedCredenceError',
-    kind: 'api',
+  BATCH_SIZE_EXCEEDED: {
+    code: 'batch_size_exceeded',
+    httpStatus: 413,
+    defaultMessage: 'The batch size exceeds the allowed maximum',
+    category: 'validation',
+  },
+  UNAUTHORIZED: {
+    code: 'unauthorized',
     httpStatus: 401,
-    defaultMessage: 'Unauthorized access',
+    defaultMessage: 'Authentication is required',
+    category: 'authentication',
   },
-  [ErrorCode.FORBIDDEN]: {
-    code: ErrorCode.FORBIDDEN,
-    sdkClassName: 'ForbiddenCredenceError',
-    kind: 'api',
+  FORBIDDEN: {
+    code: 'forbidden',
     httpStatus: 403,
-    defaultMessage: 'Forbidden access',
+    defaultMessage: 'The authenticated caller is not allowed to perform this action',
+    category: 'authorization',
   },
-  [ErrorCode.NOT_FOUND]: {
-    code: ErrorCode.NOT_FOUND,
-    sdkClassName: 'NotFoundCredenceError',
-    kind: 'api',
+  NOT_FOUND: {
+    code: 'not_found',
     httpStatus: 404,
-    defaultMessage: 'Resource not found',
+    defaultMessage: 'The requested resource was not found',
+    category: 'resource',
   },
-  [ErrorCode.CONFLICT]: {
-    code: ErrorCode.CONFLICT,
-    sdkClassName: 'ConflictCredenceError',
-    kind: 'api',
+  CONFLICT: {
+    code: 'conflict',
     httpStatus: 409,
-    defaultMessage: 'Conflict',
+    defaultMessage: 'The request conflicts with the current resource state',
+    category: 'resource',
   },
-  [ErrorCode.BATCH_SIZE_EXCEEDED]: {
-    code: ErrorCode.BATCH_SIZE_EXCEEDED,
-    sdkClassName: 'BatchSizeExceededCredenceError',
-    kind: 'api',
-    httpStatus: 400,
-    defaultMessage: 'Batch size exceeded',
+  INSUFFICIENT_FUNDS: {
+    code: 'insufficient_funds',
+    httpStatus: 422,
+    defaultMessage: 'The account has insufficient funds for this operation',
+    category: 'business',
   },
-  [ErrorCode.BATCH_SIZE_TOO_SMALL]: {
-    code: ErrorCode.BATCH_SIZE_TOO_SMALL,
-    sdkClassName: 'BatchSizeTooSmallCredenceError',
-    kind: 'api',
-    httpStatus: 400,
-    defaultMessage: 'Batch size too small',
-  },
-  [ErrorCode.RATE_LIMIT_EXCEEDED]: {
-    code: ErrorCode.RATE_LIMIT_EXCEEDED,
-    sdkClassName: 'RateLimitExceededCredenceError',
-    kind: 'api',
+  RATE_LIMIT_EXCEEDED: {
+    code: 'rate_limit_exceeded',
     httpStatus: 429,
     defaultMessage: 'Rate limit exceeded',
+    category: 'rate_limit',
   },
-  [ErrorCode.SERVICE_UNAVAILABLE]: {
-    code: ErrorCode.SERVICE_UNAVAILABLE,
-    sdkClassName: 'ServiceUnavailableCredenceError',
-    kind: 'api',
-    httpStatus: 503,
-    defaultMessage: 'Service temporarily unavailable',
-  },
-  [ErrorCode.INTERNAL_SERVER_ERROR]: {
-    code: ErrorCode.INTERNAL_SERVER_ERROR,
-    sdkClassName: 'InternalServerErrorCredenceError',
-    kind: 'api',
+  INTERNAL_SERVER_ERROR: {
+    code: 'internal_server_error',
     httpStatus: 500,
     defaultMessage: 'An unexpected internal server error occurred',
+    category: 'system',
   },
-  /** @deprecated Legacy wire code retained for backward-compatible SDK mapping. */
-  invalid_input: {
-    code: 'invalid_input',
-    sdkClassName: 'InvalidInputCredenceError',
-    kind: 'api',
-    httpStatus: 400,
-    defaultMessage: 'Invalid input',
-    deprecated: true,
-    replacedBy: ErrorCode.VALIDATION_FAILED,
+  SERVICE_UNAVAILABLE: {
+    code: 'service_unavailable',
+    httpStatus: 503,
+    defaultMessage: 'Service temporarily unavailable',
+    category: 'system',
   },
-  sdk_request_timeout: {
-    code: 'sdk_request_timeout',
-    sdkClassName: 'SdkRequestTimeoutCredenceError',
-    kind: 'transport',
-    httpStatus: 0,
-    defaultMessage: 'Request timed out',
-  },
-  sdk_network_error: {
-    code: 'sdk_network_error',
-    sdkClassName: 'SdkNetworkErrorCredenceError',
-    kind: 'transport',
-    httpStatus: 0,
-    defaultMessage: 'Network error',
-  },
-  sdk_invalid_json: {
-    code: 'sdk_invalid_json',
-    sdkClassName: 'SdkInvalidJsonCredenceError',
-    kind: 'transport',
-    httpStatus: null,
-    defaultMessage: 'Invalid JSON response',
-  },
-  sdk_unmapped_http: {
-    code: 'sdk_unmapped_http',
-    sdkClassName: 'SdkUnmappedHttpCredenceError',
-    kind: 'transport',
-    httpStatus: null,
-    defaultMessage: 'Unmapped HTTP error response',
-    unmappedHttpFallback: true,
-  },
-} as const satisfies Record<string, ErrorCatalogEntry>
+} as const)
 
-export type ErrorCatalogCode = keyof typeof ERROR_CATALOG
+export type ErrorCatalogKey = keyof typeof ERROR_CATALOG
 
-export const ERROR_CATALOG_CODES = Object.keys(ERROR_CATALOG) as ErrorCatalogCode[]
-
-export const API_ERROR_CATALOG_CODES = ERROR_CATALOG_CODES.filter(
-  (key) => ERROR_CATALOG[key].kind === 'api',
+export const ErrorCode = Object.freeze(
+  Object.fromEntries(
+    Object.entries(ERROR_CATALOG).map(([key, entry]) => [key, entry.code])
+  ) as { readonly [K in ErrorCatalogKey]: (typeof ERROR_CATALOG)[K]['code'] }
 )
 
-export const TRANSPORT_ERROR_CATALOG_CODES = ERROR_CATALOG_CODES.filter(
-  (key) => ERROR_CATALOG[key].kind === 'transport',
-)
+export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode]
 
-export function getCatalogEntry(code: string): ErrorCatalogEntry | undefined {
-  return ERROR_CATALOG[code as ErrorCatalogCode]
+export const ERROR_CATALOG_BY_CODE = Object.freeze(
+  Object.fromEntries(
+    Object.values(ERROR_CATALOG).map((entry) => [entry.code, entry])
+  ) as Record<ErrorCode, ErrorCatalogEntry>
+) as Readonly<Record<ErrorCode, ErrorCatalogEntry>>
+
+const ACTIVE_ERROR_CODES: ReadonlySet<string> = new Set(Object.keys(ERROR_CATALOG_BY_CODE))
+
+/**
+ * Deprecated code registry. Keep removed/renamed codes here so contract tests
+ * can distinguish intentional deprecations from breaking changes.
+ */
+export const ERROR_CODE_DEPRECATIONS = Object.freeze({}) as Readonly<
+  Record<string, ErrorCodeDeprecation>
+>
+
+export const DEFAULT_ERROR_LOCALE = 'en' as const
+
+export const ERROR_LOCALIZATION_CATALOG = Object.freeze({
+  [DEFAULT_ERROR_LOCALE]: Object.freeze(
+    Object.fromEntries(
+      Object.values(ERROR_CATALOG).map((entry) => [entry.code, entry.defaultMessage])
+    ) as Record<ErrorCode, string>
+  ),
+}) as Readonly<Record<typeof DEFAULT_ERROR_LOCALE, Readonly<Record<ErrorCode, string>>>>
+
+export type ErrorLocale = keyof typeof ERROR_LOCALIZATION_CATALOG
+
+export function isErrorCode(code: unknown): code is ErrorCode {
+  return typeof code === 'string' && ACTIVE_ERROR_CODES.has(code)
 }
 
-export function getUnmappedHttpFallbackEntry(): ErrorCatalogEntry {
-  const entry = ERROR_CATALOG_CODES
-    .map((key) => ERROR_CATALOG[key])
-    .find((item) => item.unmappedHttpFallback)
-  if (!entry) {
-    throw new Error('ERROR_CATALOG is missing an unmappedHttpFallback transport entry')
-  }
-  return entry
+export function getErrorCatalogEntry(code: ErrorCode): ErrorCatalogEntry {
+  return ERROR_CATALOG_BY_CODE[code]
+}
+
+export function getErrorCatalogEntryByCode(code: unknown): ErrorCatalogEntry | undefined {
+  return isErrorCode(code) ? ERROR_CATALOG_BY_CODE[code] : undefined
+}
+
+export function getLocalizedErrorMessage(
+  code: ErrorCode,
+  locale: ErrorLocale = DEFAULT_ERROR_LOCALE
+): string {
+  return ERROR_LOCALIZATION_CATALOG[locale]?.[code]
+    ?? ERROR_LOCALIZATION_CATALOG[DEFAULT_ERROR_LOCALE][code]
 }

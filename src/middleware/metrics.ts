@@ -11,7 +11,7 @@
 
 import { Request, Response, NextFunction } from 'express'
 import client from 'prom-client'
-import { registerLatencyMetrics } from '../observability/latencyMetrics.js'
+import { httpRequestDurationHistogram, httpRequestStatusTotal, normalizeRoute, registerLatencyMetrics } from '../observability/latencyMetrics.js'
 import { registerPoolMetrics } from '../observability/index.js'
 import { pool, workerPool } from '../db/pool.js'
 
@@ -338,6 +338,13 @@ export function recordStaleCacheRead(namespace: string) {
  */
 export function recordSettlementDuplicate() {
   settlementDuplicatesDetected.inc()
+}
+
+export function recordIdempotencyCheck(handlerType: string, result: 'duplicate' | 'executed' | 'error'): void {
+  idempotencyGuardChecks.inc({ handler_type: handlerType, result })
+  if (result === 'duplicate') {
+    idempotencyDuplicatesDetected.inc({ handler_type: handlerType })
+  }
 }
 
 /**
