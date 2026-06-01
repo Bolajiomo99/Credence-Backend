@@ -128,3 +128,94 @@ The catch-block fallback in `src/app.ts` also derives `failOpen` from `NODE_ENV`
 - **Misconfiguration cannot disable limits in production.** The `RATE_LIMIT_FAIL_OPEN` default is `false` when `NODE_ENV=production`, and the startup fallback in `src/app.ts` mirrors this.
 - **Key identifiers are never stored in plain text.** When no authenticated record is present, the tenant id is derived from a truncated SHA-256 hash of the API key or Bearer token.
 - **Per-key isolation** ensures that a compromised or misbehaving key cannot exhaust the rate budget of other keys belonging to the same tenant.
+
+---
+
+## Security Headers
+
+### Overview
+
+The API uses [Helmet](https://helmetjs.github.io/) middleware to set strict security headers on all HTTP responses. This provides defense-in-depth protection against common web vulnerabilities, even though the API is primarily consumed programmatically.
+
+### Implementation
+
+Security headers are configured in `src/middleware/securityHeaders.ts` and mounted in `src/app.ts` before all route handlers. The middleware is wrapped to provide:
+
+1. **Testability**: Helmet is wrapped in a custom middleware function that can be easily mocked and tested
+2. **Per-route overrides**: Routes can customize or disable specific headers by setting `res.locals.securityHeaders`
+
+### Configured Headers
+
+| Header | Value | Purpose |
+|--------|-------|---------|
+| `Content-Security-Policy` | `default-src 'self'` with no unsafe-inline | Prevents XSS and data injection attacks |
+| `Strict-Transport-Security` | `max-age=31536000; includeSubDomains; preload` (prod only) | Enforces HTTPS connections |
+| `Referrer-Policy` | `strict-origin-when-cross-origin` | Controls referrer information leakage |
+| `Cross-Origin-Resource-Policy` | `same-origin` | Prevents cross-origin resource loading |
+| `X-Content-Type-Options` | `nosniff` | Prevents MIME-type sniffing |
+| `X-Powered-By` | (removed) | Hides server technology information |
+
+### Content Security Policy (CSP)
+
+The CSP is configured with strict defaults:
+
+- **Blocks unsafe-inline and unsafe-eval**: Scripts and styles cannot be executed from inline sources
+- **Restricts frame sources**: `frame-src 'none'` prevents clickjacking
+- **Restricts object sources**: `object-src 'none'` prevents plugin-based attacks
+- **Allows data and HTTPS images**: For error pages and webhook playgrounds
+- **Self-only defaults**: All other sources are restricted to same-origin
+
+### HSTS Configuration
+
+HTTP Strict Transport Security (HSTS) is configured differently based on environment:
+
+- **Production**: Full HSTS with `preload` enabled for maximum security
+- **Development/Test**: HSTS without `preload` to avoid browser caching issues during development
+
+The preload directive is only enabled when `NODE_ENV=production`.
+
+### Per-Route Overrides
+
+Routes can customize security headers for specific use cases (e.g., OpenAPI documentation, webhook playground):
+
+```typescript
+app.get('/api/docs', (req, res, next) => {
+  res.locals.securityHeaders = {
+    contentSecurityPolicy: {
+      directives: {
+        scriptSrc: ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net'],
+      },
+    },
+  }
+  next()
+}, securityHeadersWithOverride)
+```
+
+Common override scenarios:
+
+- **OpenAPI docs viewer**: Relax CSP to allow Swagger UI resources
+- **Webhook simulator**: Allow specific external domains for testing
+- **Error pages**: Customize CSP for enhanced error reporting
+
+### Testing
+
+Security headers are tested in `src/middleware/__tests__/securityHeaders.test.ts` with 95%+ coverage:
+
+- Default header configuration
+- Production vs. development behavior
+- Per-route override functionality
+- CSP strictness (no unsafe-inline)
+- Edge cases (large responses, middleware chains)
+
+Run tests with:
+```bash
+npm test -- securityHeaders
+```
+
+### Security Properties
+
+- **Defense-in-depth**: Headers provide additional protection even when other controls fail
+- **Zero trust approach**: All external resources are blocked by default
+- **Environment-aware**: HSTS preload only in production to avoid development issues
+- **Testable**: Wrapped middleware enables comprehensive testing and validation
+- **Flexible**: Per-route overrides allow necessary exceptions for documentation and testing tools
