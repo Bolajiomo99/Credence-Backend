@@ -217,7 +217,19 @@ export function requireApiKey(requiredScope: ApiScope) {
       return
     }
 
-    const grantedScopes = API_KEYS[apiKey]
+    let grantedScopes = API_KEYS[apiKey]
+    let dbKey: any = null
+
+    if (!grantedScopes) {
+      dbKey = validateApiKey(apiKey)
+      if (dbKey) {
+        grantedScopes = dbKey.scopes.map(s => {
+          if (s === 'full') return ApiScope.ENTERPRISE
+          if (s === 'read') return ApiScope.PUBLIC
+          return s as ApiScope
+        })
+      }
+    }
 
     if (!grantedScopes) {
       res.status(401).json({
@@ -229,26 +241,33 @@ export function requireApiKey(requiredScope: ApiScope) {
 
     // Deny-by-default: key must satisfy the required scope
     if (!scopeSatisfies(grantedScopes, requiredScope)) {
-      res.status(403).json({
-        error: 'Forbidden',
-        message: `Insufficient scope: '${requiredScope}' is required`,
-        requiredScope,
-        grantedScopes,
-      })
+      if (requiredScope === ApiScope.ENTERPRISE) {
+        res.status(403).json({
+          error: 'Forbidden',
+          message: 'Enterprise API key required',
+        })
+      } else {
+        res.status(403).json({
+          error: 'Forbidden',
+          message: `Insufficient scope: '${requiredScope}' is required`,
+          requiredScope,
+          grantedScopes,
+        })
+      }
       return
     }
 
     // Attach metadata to request for downstream handlers.
-    // `scope` (singular) is kept for backward compatibility with existing
-    // route handlers that read `req.apiKey.scope`.
-    ;(req as any).apiKey = {
-      key: apiKey,
-      scopes: grantedScopes,
-      // Legacy single-scope field: use ENTERPRISE when the key holds it,
-      // otherwise fall back to the first granted scope.
-      scope: grantedScopes.includes(ApiScope.ENTERPRISE)
-        ? ApiScope.ENTERPRISE
-        : grantedScopes[0],
+    if (dbKey) {
+      ;(req as any).apiKey = dbKey
+    } else {
+      ;(req as any).apiKey = {
+        key: apiKey,
+        scopes: grantedScopes,
+        scope: grantedScopes.includes(ApiScope.ENTERPRISE)
+          ? ApiScope.ENTERPRISE
+          : grantedScopes[0],
+      }
     }
     next()
   }

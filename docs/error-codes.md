@@ -16,6 +16,7 @@ This reference is generated from `src/lib/errorCatalog.ts` and is the source of 
 
 | Code | HTTP status | Category | Default message |
 | --- | ---: | --- | --- |
+| `invalid_input` | 400 |  | Invalid input |
 | `unauthorized` | 401 | authentication | Authentication is required |
 | `forbidden` | 403 | authorization | The authenticated caller is not allowed to perform this action |
 | `insufficient_funds` | 422 | business | The account has insufficient funds for this operation |
@@ -41,7 +42,7 @@ This reference is generated from `src/lib/errorCatalog.ts` and is the source of 
 
 | Locale | Coverage | Notes |
 | --- | ---: | --- |
-| `en` | 18 messages | Catalog default messages for active codes. |
+| `en` | 23 messages | Catalog default messages for active codes. |
 
 ## Deprecated codes
 

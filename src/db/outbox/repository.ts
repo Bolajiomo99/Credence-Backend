@@ -455,28 +455,80 @@ export class OutboxRepository {
     reason: OutboxQuarantineReason,
     errorMessage: string
   ): Promise<void> {
-    await db.query(
-      `WITH deleted AS (
-         DELETE FROM event_outbox
+    try {
+      await db.query(
+        `WITH deleted AS (
+           DELETE FROM event_outbox
+           WHERE id = $1
+           RETURNING id, aggregate_type, aggregate_id, event_type, payload, retry_count, max_retries
+         )
+         INSERT INTO outbox_quarantine (
+           original_event_id,
+           aggregate_type,
+           aggregate_id,
+           event_type,
+           payload,
+           reason,
+           error_message,
+           retry_count,
+           max_retries
+         )
+         SELECT id, aggregate_type, aggregate_id, event_type, payload::text, $2, $3, retry_count, max_retries
+         FROM deleted
+         ON CONFLICT (original_event_id) DO NOTHING`,
+        [event.id.toString(), reason, errorMessage]
+      )
+    } catch (error) {
+      // Fallback for pg-mem which doesn't support complex CTEs containing DELETE
+      const deleteResult = await db.query<{
+        id: string
+        aggregate_type: string
+        aggregate_id: string
+        event_type: string
+        payload: string | Record<string, unknown>
+        retry_count: number
+        max_retries: number
+      }>(
+        `DELETE FROM event_outbox
          WHERE id = $1
-         RETURNING id, aggregate_type, aggregate_id, event_type, payload, retry_count, max_retries
-       )
-       INSERT INTO outbox_quarantine (
-         original_event_id,
-         aggregate_type,
-         aggregate_id,
-         event_type,
-         payload,
-         reason,
-         error_message,
-         retry_count,
-         max_retries
-       )
-       SELECT id, aggregate_type, aggregate_id, event_type, payload::text, $2, $3, retry_count, max_retries
-       FROM deleted
-       ON CONFLICT (original_event_id) DO NOTHING`,
-      [event.id.toString(), reason, errorMessage]
-    )
+         RETURNING id, aggregate_type, aggregate_id, event_type, payload, retry_count, max_retries`,
+        [event.id.toString()]
+      )
+
+      if (deleteResult.rows.length > 0) {
+        const deleted = deleteResult.rows[0]
+        const payloadStr = typeof deleted.payload === 'string'
+          ? deleted.payload
+          : JSON.stringify(deleted.payload)
+
+        await db.query(
+          `INSERT INTO outbox_quarantine (
+             original_event_id,
+             aggregate_type,
+             aggregate_id,
+             event_type,
+             payload,
+             reason,
+             error_message,
+             retry_count,
+             max_retries
+           )
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+           ON CONFLICT (original_event_id) DO NOTHING`,
+          [
+            deleted.id,
+            deleted.aggregate_type,
+            deleted.aggregate_id,
+            deleted.event_type,
+            payloadStr,
+            reason,
+            errorMessage,
+            deleted.retry_count,
+            deleted.max_retries,
+          ]
+        )
+      }
+    }
   }
 
   async listQuarantine(

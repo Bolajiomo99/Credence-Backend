@@ -7,6 +7,9 @@ vi.mock('../../src/db/pool.js', () => ({
   pool: {
     query: vi.fn(),
   },
+  workerPool: {
+    query: vi.fn(),
+  }
 }))
 
 vi.mock('../../src/middleware/idempotency.js', () => ({
