@@ -5,7 +5,7 @@ import { createDefaultProbes } from "./services/health/probes.js";
 import { isReady } from "./lifecycle.js";
 import trustRouter from "./routes/trust.js";
 import bulkRouter from "./routes/bulk.js";
-import importsRouter from "./routes/imports.js";
+import { createImportsRouter } from "./routes/imports.js";
 import { createAdminRouter } from "./routes/admin/index.js";
 import { createWebhookAdminRouter } from "./routes/admin/webhooks.js";
 import { createFeatureFlagAdminRouter } from "./routes/admin/featureFlags.js";
@@ -96,7 +96,7 @@ app.use("/api/attestations", createAttestationRouter());
 
 app.use("/api/bulk", bulkRouter);
 
-app.use("/api/imports", importsRouter);
+app.use("/api/imports", createImportsRouter());
 
 app.use("/api/admin", createAdminRouter());
 app.use("/api/admin/webhooks", createWebhookAdminRouter());
