@@ -171,6 +171,14 @@ export const ERROR_CATALOG = freezeCatalog({
     defaultMessage: 'The account has insufficient funds for this operation',
     category: 'business',
   },
+  INVALID_DISPUTE_TRANSITION: {
+    code: 'invalid_dispute_transition',
+    sdkClassName: 'InvalidDisputeTransitionCredenceError',
+    kind: 'api',
+    httpStatus: 422,
+    defaultMessage: 'Invalid dispute state transition',
+    category: 'business',
+  },
   RATE_LIMIT_EXCEEDED: {
     code: 'rate_limit_exceeded',
     sdkClassName: 'RateLimitExceededCredenceError',
