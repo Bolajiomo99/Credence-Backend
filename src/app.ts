@@ -8,6 +8,7 @@ import bulkRouter from "./routes/bulk.js";
 import importsRouter from "./routes/imports.js";
 import { createAdminRouter } from "./routes/admin/index.js";
 import { createWebhookAdminRouter } from "./routes/admin/webhooks.js";
+import { createFeatureFlagAdminRouter } from "./routes/admin/featureFlags.js";
 import { createPolicyRouter } from "./routes/policy.js";
 import { createAnalyticsRouter } from "./routes/analytics.js";
 import { createPayoutsRouter } from "./routes/payouts.js";
@@ -99,6 +100,7 @@ app.use("/api/imports", importsRouter);
 
 app.use("/api/admin", createAdminRouter());
 app.use("/api/admin/webhooks", createWebhookAdminRouter());
+app.use("/api/admin/feature-flags", createFeatureFlagAdminRouter());
 
 app.use("/api/orgs/:orgId/policies", createPolicyRouter());
 
