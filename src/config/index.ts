@@ -17,6 +17,12 @@ export const envSchema = z.object({
       .default('600') // 10 minutes
       .transform(Number)
       .pipe(z.number().int().min(60).max(86400)),
+    // Webhook payload size cap in bytes
+    WEBHOOK_PAYLOAD_SIZE_CAP: z
+      .string()
+      .default('262144') // 256 KiB
+      .transform(Number)
+      .pipe(z.number().int().min(1024).max(10485760)), // 1KB to 10MB
   // Server
   PORT: z
     .string()
