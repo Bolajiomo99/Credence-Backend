@@ -18,6 +18,7 @@ import { pool } from "./db/pool.js";
 import { requestIdMiddleware } from "./middleware/requestId.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { createRateLimitMiddleware } from "./middleware/rateLimit.js";
+import { createCostMeterMiddleware } from "./middleware/costMeter.js";
 import { validateConfig } from "./config/index.js";
 import { createAttestationRouter } from "./routes/attestations.js";
 import { tenantContextMiddleware } from './middleware/tenantContext.js'
@@ -75,6 +76,15 @@ const healthProbes = createDefaultProbes();
 app.use("/api/health", createHealthRouter({ ...healthProbes, isReady }));
 
 app.use("/api", rateLimitMiddleware);
+
+try {
+  const config = validateConfig(process.env)
+  const costMeterConfig = { costWeights: config.endpointCostWeights, defaultMonthlyCredits: config.credits.defaultMonthly }
+  const costMeterMiddleware = createCostMeterMiddleware(costMeterConfig, () => pool)
+  app.use("/api", costMeterMiddleware)
+} catch {
+  // If config is invalid, cost metering is safely skipped
+}
 
 app.use("/api/trust", trustRouter);
 
