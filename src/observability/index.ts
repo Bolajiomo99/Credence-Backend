@@ -31,3 +31,11 @@ export {
   setOutboxPendingGauge,
   incrementOutboxLeaseRenew,
 } from './outboxMetrics.js'
+
+export {
+  syntheticProbeSuccessTotal,
+  syntheticProbeFailureTotal,
+  dbTxnDurationSeconds,
+  dbTxnSavepoints,
+  registerSyntheticMetrics,
+} from './customMetrics.js'
