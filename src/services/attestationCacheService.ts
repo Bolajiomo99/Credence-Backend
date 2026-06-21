@@ -4,6 +4,8 @@
  */
 
 import { AttestationsRepository, Attestation, type AttestationPage, type ListAttestationsPageOptions, type CursorPaginationOptions, type AttestationCursorPage } from '../db/repositories/attestationsRepository.js'
+import { cache } from '../cache/redis.js'
+import { createCacheKey, invalidateCache } from '../cache/invalidation.js'
 
 const ATTESTATION_CACHE_TTL = 300 // 5 minutes
 

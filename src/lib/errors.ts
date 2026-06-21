@@ -1,6 +1,7 @@
 import {
   ErrorCode as ErrorCodeRegistry,
   getErrorCatalogEntry,
+  getHttpStatus,
   isErrorCode,
   type ErrorCode as ErrorCodeValue,
 } from './errorCatalog.js'
@@ -65,7 +66,7 @@ export class AppError extends Error {
     super(message, options)
     this.name = this.constructor.name
     this.code = code
-    this.status = catalogEntry.httpStatus
+    this.status = getHttpStatus(catalogEntry)
     this.details = details
 
     const captureStackTrace = (Error as ErrorConstructor & {

@@ -13,9 +13,14 @@ export function getTenantId(): string | undefined {
   return store?.get("tenantId");
 }
 
-export function setTenantId(tenantId: string): void {
+export function setTenantId(tenantId: string | null): void {
   const store = ALS.getStore();
-  if (store) store.set("tenantId", tenantId);
+  if (!store) return;
+  if (tenantId === null) {
+    store.delete("tenantId");
+  } else {
+    store.set("tenantId", tenantId);
+  }
 }
 
 export default {

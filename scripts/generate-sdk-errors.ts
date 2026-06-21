@@ -159,11 +159,24 @@ export class CredenceError extends Error {
   }
 }
 
+/**
+ * Common construct signature shared by every generated CredenceError subclass.
+ * Subclasses pin their \`code\` internally, so the public constructor is
+ * \`(message, status, details?, options?)\`. The registry is keyed by code and
+ * always instantiated via this shape.
+ */
+export type CredenceErrorConstructor = new (
+  message: string,
+  status: number,
+  details?: unknown,
+  options?: CredenceErrorOptions,
+) => CredenceError
+
 ${classBlocks}
 
 export const CREDENCE_ERROR_REGISTRY = {
 ${registryEntries}
-} as const satisfies Record<string, typeof CredenceError>
+} as const satisfies Record<string, CredenceErrorConstructor>
 
 export type CredenceErrorCode = keyof typeof CREDENCE_ERROR_REGISTRY
 

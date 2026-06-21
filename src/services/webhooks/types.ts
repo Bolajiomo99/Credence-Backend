@@ -31,6 +31,12 @@ export interface WebhookConfig {
   maxAttempts?: number
   /** Optional per-webhook delivery timeout in milliseconds. */
   timeoutMs?: number
+  /** Optional mTLS client certificate (PEM) presented to the endpoint. */
+  clientCertPem?: string
+  /** Optional KMS reference for the mTLS client private key. */
+  clientKeyKmsRef?: string
+  /** Optional SHA-256 pin of the expected server certificate. */
+  pinnedServerCertSha256?: string
 }
 
 /**
@@ -52,8 +58,8 @@ export interface WebhookPayload {
   event: WebhookEventType
   /** ISO timestamp when event occurred. */
   timestamp: string
-  /** Event data (identity state). */
-  data: Record<string, unknown>
+  /** Event data (identity state, or a list of items for chunked payloads). */
+  data: Record<string, unknown> | unknown[]
   /** Chunk ID for chunked payloads (optional). */
   chunkId?: string
   /** Index of this chunk (0-based). */

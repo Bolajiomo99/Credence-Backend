@@ -1,13 +1,13 @@
 import type { Request, Response, NextFunction } from 'express'
 import { AppError } from '../lib/errors.js'
-import { ErrorCode, getErrorCatalogEntry, isErrorCode } from '../lib/errorCatalog.js'
+import { ErrorCode, getErrorCatalogEntry, getHttpStatus, isErrorCode } from '../lib/errorCatalog.js'
 
 const isProduction = (): boolean => process.env.NODE_ENV === 'production'
 
 const sendInternalServerError = (res: Response): void => {
   const catalogEntry = getErrorCatalogEntry(ErrorCode.INTERNAL_SERVER_ERROR)
 
-  res.status(catalogEntry.httpStatus).json({
+  res.status(getHttpStatus(catalogEntry)).json({
     error: catalogEntry.defaultMessage,
     code: catalogEntry.code,
     error_code: catalogEntry.code,
@@ -33,7 +33,7 @@ export const errorHandler = (
     }
 
     const catalogEntry = getErrorCatalogEntry(err.code)
-    res.status(catalogEntry.httpStatus).json(err.toJSON({
+    res.status(getHttpStatus(catalogEntry)).json(err.toJSON({
       // Production responses must not leak PII, stack traces, or chained causes
       // through bespoke messages/details. Consumers can still branch on `code`
       // (or the `error_code` alias).

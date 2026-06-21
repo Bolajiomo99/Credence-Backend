@@ -280,12 +280,12 @@ export const TRANSPORT_ERROR_CATALOG_CODES = ERROR_CATALOG_CODES.filter(
 ).map((key) => ERROR_CATALOG[key].code)
 
 export function getCatalogEntry(code: string): ErrorCatalogEntry | undefined {
-  return ERROR_CATALOG_BY_CODE[code as any]
+  return isErrorCode(code) ? ERROR_CATALOG_BY_CODE[code] : undefined
 }
 
 export function getUnmappedHttpFallbackEntry(): ErrorCatalogEntry {
   const entry = ERROR_CATALOG_CODES
-    .map((key) => ERROR_CATALOG[key])
+    .map((key): ErrorCatalogEntry => ERROR_CATALOG[key])
     .find((item) => item.unmappedHttpFallback)
   if (!entry) {
     throw new Error('ERROR_CATALOG is missing an unmappedHttpFallback transport entry')
@@ -335,6 +335,17 @@ export function isErrorCode(code: unknown): code is ErrorCode {
 
 export function getErrorCatalogEntry(code: ErrorCode): ErrorCatalogEntry {
   return ERROR_CATALOG_BY_CODE[code]
+}
+
+/**
+ * Resolve a catalog entry's HTTP status to a concrete number.
+ *
+ * Transport-kind entries (e.g. network/JSON failures) carry a `null` status
+ * because they never originate an HTTP response. When such a code is used in an
+ * HTTP context we fall back to 500 (Internal Server Error).
+ */
+export function getHttpStatus(entry: ErrorCatalogEntry): number {
+  return entry.httpStatus ?? 500
 }
 
 export function getErrorCatalogEntryByCode(code: unknown): ErrorCatalogEntry | undefined {

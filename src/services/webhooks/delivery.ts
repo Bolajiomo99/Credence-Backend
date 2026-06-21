@@ -423,6 +423,16 @@ async function deliverSingleWebhook(
 export async function deliverWebhook(
   webhook: WebhookConfig,
   payload: WebhookPayload,
+  options: DeliveryOptions & { returnAllChunks: true }
+): Promise<WebhookDeliveryResult[]>
+export async function deliverWebhook(
+  webhook: WebhookConfig,
+  payload: WebhookPayload,
+  options?: DeliveryOptions & { returnAllChunks?: false }
+): Promise<WebhookDeliveryResult | WebhookDeliveryResult[]>
+export async function deliverWebhook(
+  webhook: WebhookConfig,
+  payload: WebhookPayload,
   options: DeliveryOptions & { returnAllChunks?: boolean } = {}
 ): Promise<WebhookDeliveryResult | WebhookDeliveryResult[]> {
   const sizeCap = options.payloadSizeCap ?? 262144 // Default 256KB if not provided
