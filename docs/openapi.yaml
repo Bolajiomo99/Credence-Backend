@@ -1125,6 +1125,853 @@ components:
         - trust_score_summary
         - bond_audit
         - attestation_export
+    resolveDisputeBodySchema:
+      def:
+        type: object
+        shape:
+          resolution:
+            def:
+              type: string
+              checks:
+                - {}
+            type: string
+            format: null
+            minLength: 1
+            maxLength: null
+      type: object
+    slashRequestPathParamsSchema:
+      def:
+        type: object
+        shape:
+          id:
+            def:
+              type: string
+            type: string
+            format: null
+            minLength: null
+            maxLength: null
+      type: object
+    slashRequestSchema:
+      def:
+        type: object
+        shape:
+          id:
+            def:
+              type: string
+            type: string
+            format: null
+            minLength: null
+            maxLength: null
+          targetAddress:
+            def:
+              type: string
+            type: string
+            format: null
+            minLength: null
+            maxLength: null
+          reason:
+            def:
+              type: string
+            type: string
+            format: null
+            minLength: null
+            maxLength: null
+          requestedBy:
+            def:
+              type: string
+            type: string
+            format: null
+            minLength: null
+            maxLength: null
+          createdAt:
+            def:
+              type: string
+              checks:
+                - def:
+                    type: string
+                    format: datetime
+                    check: string_format
+                    offset: false
+                    local: false
+                    precision: null
+                    pattern: {}
+                  type: string
+                  format: datetime
+                  minLength: null
+                  maxLength: null
+            type: string
+            format: datetime
+            minLength: null
+            maxLength: null
+          votes:
+            def:
+              type: array
+              element:
+                def:
+                  type: object
+                  shape:
+                    voterId:
+                      def:
+                        type: string
+                      type: string
+                      format: null
+                      minLength: null
+                      maxLength: null
+                    choice:
+                      def:
+                        type: enum
+                        entries:
+                          approve: approve
+                          reject: reject
+                      type: enum
+                      enum:
+                        approve: approve
+                        reject: reject
+                      options:
+                        - approve
+                        - reject
+                    timestamp:
+                      def:
+                        type: string
+                        checks:
+                          - def:
+                              type: string
+                              format: datetime
+                              check: string_format
+                              offset: false
+                              local: false
+                              precision: null
+                              pattern: {}
+                            type: string
+                            format: datetime
+                            minLength: null
+                            maxLength: null
+                      type: string
+                      format: datetime
+                      minLength: null
+                      maxLength: null
+                type: object
+            type: array
+            element:
+              def:
+                type: object
+                shape:
+                  voterId:
+                    def:
+                      type: string
+                    type: string
+                    format: null
+                    minLength: null
+                    maxLength: null
+                  choice:
+                    def:
+                      type: enum
+                      entries:
+                        approve: approve
+                        reject: reject
+                    type: enum
+                    enum:
+                      approve: approve
+                      reject: reject
+                    options:
+                      - approve
+                      - reject
+                  timestamp:
+                    def:
+                      type: string
+                      checks:
+                        - def:
+                            type: string
+                            format: datetime
+                            check: string_format
+                            offset: false
+                            local: false
+                            precision: null
+                            pattern: {}
+                          type: string
+                          format: datetime
+                          minLength: null
+                          maxLength: null
+                    type: string
+                    format: datetime
+                    minLength: null
+                    maxLength: null
+              type: object
+          status:
+            def:
+              type: enum
+              entries:
+                pending: pending
+                approved: approved
+                rejected: rejected
+            type: enum
+            enum:
+              pending: pending
+              approved: approved
+              rejected: rejected
+            options:
+              - pending
+              - approved
+              - rejected
+          threshold:
+            def:
+              type: number
+              checks:
+                - def:
+                    type: number
+                    check: number_format
+                    abort: false
+                    format: safeint
+                  type: number
+                  minValue: -9007199254740991
+                  maxValue: 9007199254740991
+                  isInt: true
+                  isFinite: true
+                  format: safeint
+            type: number
+            minValue: -9007199254740991
+            maxValue: 9007199254740991
+            isInt: true
+            isFinite: true
+            format: safeint
+          totalSigners:
+            def:
+              type: number
+              checks:
+                - def:
+                    type: number
+                    check: number_format
+                    abort: false
+                    format: safeint
+                  type: number
+                  minValue: -9007199254740991
+                  maxValue: 9007199254740991
+                  isInt: true
+                  isFinite: true
+                  format: safeint
+            type: number
+            minValue: -9007199254740991
+            maxValue: 9007199254740991
+            isInt: true
+            isFinite: true
+            format: safeint
+      type: object
+    slashRequestStatusSchema:
+      def:
+        type: enum
+        entries:
+          pending: pending
+          approved: approved
+          rejected: rejected
+      type: enum
+      enum:
+        pending: pending
+        approved: approved
+        rejected: rejected
+      options:
+        - pending
+        - approved
+        - rejected
+    slashRequestsListResponseSchema:
+      def:
+        type: object
+        shape:
+          success:
+            def:
+              type: literal
+              values:
+                - true
+            type: literal
+            values: {}
+          data:
+            def:
+              type: array
+              element:
+                def:
+                  type: object
+                  shape:
+                    id:
+                      def:
+                        type: string
+                      type: string
+                      format: null
+                      minLength: null
+                      maxLength: null
+                    targetAddress:
+                      def:
+                        type: string
+                      type: string
+                      format: null
+                      minLength: null
+                      maxLength: null
+                    reason:
+                      def:
+                        type: string
+                      type: string
+                      format: null
+                      minLength: null
+                      maxLength: null
+                    requestedBy:
+                      def:
+                        type: string
+                      type: string
+                      format: null
+                      minLength: null
+                      maxLength: null
+                    createdAt:
+                      def:
+                        type: string
+                        checks:
+                          - def:
+                              type: string
+                              format: datetime
+                              check: string_format
+                              offset: false
+                              local: false
+                              precision: null
+                              pattern: {}
+                            type: string
+                            format: datetime
+                            minLength: null
+                            maxLength: null
+                      type: string
+                      format: datetime
+                      minLength: null
+                      maxLength: null
+                    votes:
+                      def:
+                        type: array
+                        element:
+                          def:
+                            type: object
+                            shape:
+                              voterId:
+                                def:
+                                  type: string
+                                type: string
+                                format: null
+                                minLength: null
+                                maxLength: null
+                              choice:
+                                def:
+                                  type: enum
+                                  entries:
+                                    approve: approve
+                                    reject: reject
+                                type: enum
+                                enum:
+                                  approve: approve
+                                  reject: reject
+                                options:
+                                  - approve
+                                  - reject
+                              timestamp:
+                                def:
+                                  type: string
+                                  checks:
+                                    - def:
+                                        type: string
+                                        format: datetime
+                                        check: string_format
+                                        offset: false
+                                        local: false
+                                        precision: null
+                                        pattern: {}
+                                      type: string
+                                      format: datetime
+                                      minLength: null
+                                      maxLength: null
+                                type: string
+                                format: datetime
+                                minLength: null
+                                maxLength: null
+                          type: object
+                      type: array
+                      element:
+                        def:
+                          type: object
+                          shape:
+                            voterId:
+                              def:
+                                type: string
+                              type: string
+                              format: null
+                              minLength: null
+                              maxLength: null
+                            choice:
+                              def:
+                                type: enum
+                                entries:
+                                  approve: approve
+                                  reject: reject
+                              type: enum
+                              enum:
+                                approve: approve
+                                reject: reject
+                              options:
+                                - approve
+                                - reject
+                            timestamp:
+                              def:
+                                type: string
+                                checks:
+                                  - def:
+                                      type: string
+                                      format: datetime
+                                      check: string_format
+                                      offset: false
+                                      local: false
+                                      precision: null
+                                      pattern: {}
+                                    type: string
+                                    format: datetime
+                                    minLength: null
+                                    maxLength: null
+                              type: string
+                              format: datetime
+                              minLength: null
+                              maxLength: null
+                        type: object
+                    status:
+                      def:
+                        type: enum
+                        entries:
+                          pending: pending
+                          approved: approved
+                          rejected: rejected
+                      type: enum
+                      enum:
+                        pending: pending
+                        approved: approved
+                        rejected: rejected
+                      options:
+                        - pending
+                        - approved
+                        - rejected
+                    threshold:
+                      def:
+                        type: number
+                        checks:
+                          - def:
+                              type: number
+                              check: number_format
+                              abort: false
+                              format: safeint
+                            type: number
+                            minValue: -9007199254740991
+                            maxValue: 9007199254740991
+                            isInt: true
+                            isFinite: true
+                            format: safeint
+                      type: number
+                      minValue: -9007199254740991
+                      maxValue: 9007199254740991
+                      isInt: true
+                      isFinite: true
+                      format: safeint
+                    totalSigners:
+                      def:
+                        type: number
+                        checks:
+                          - def:
+                              type: number
+                              check: number_format
+                              abort: false
+                              format: safeint
+                            type: number
+                            minValue: -9007199254740991
+                            maxValue: 9007199254740991
+                            isInt: true
+                            isFinite: true
+                            format: safeint
+                      type: number
+                      minValue: -9007199254740991
+                      maxValue: 9007199254740991
+                      isInt: true
+                      isFinite: true
+                      format: safeint
+                type: object
+            type: array
+            element:
+              def:
+                type: object
+                shape:
+                  id:
+                    def:
+                      type: string
+                    type: string
+                    format: null
+                    minLength: null
+                    maxLength: null
+                  targetAddress:
+                    def:
+                      type: string
+                    type: string
+                    format: null
+                    minLength: null
+                    maxLength: null
+                  reason:
+                    def:
+                      type: string
+                    type: string
+                    format: null
+                    minLength: null
+                    maxLength: null
+                  requestedBy:
+                    def:
+                      type: string
+                    type: string
+                    format: null
+                    minLength: null
+                    maxLength: null
+                  createdAt:
+                    def:
+                      type: string
+                      checks:
+                        - def:
+                            type: string
+                            format: datetime
+                            check: string_format
+                            offset: false
+                            local: false
+                            precision: null
+                            pattern: {}
+                          type: string
+                          format: datetime
+                          minLength: null
+                          maxLength: null
+                    type: string
+                    format: datetime
+                    minLength: null
+                    maxLength: null
+                  votes:
+                    def:
+                      type: array
+                      element:
+                        def:
+                          type: object
+                          shape:
+                            voterId:
+                              def:
+                                type: string
+                              type: string
+                              format: null
+                              minLength: null
+                              maxLength: null
+                            choice:
+                              def:
+                                type: enum
+                                entries:
+                                  approve: approve
+                                  reject: reject
+                              type: enum
+                              enum:
+                                approve: approve
+                                reject: reject
+                              options:
+                                - approve
+                                - reject
+                            timestamp:
+                              def:
+                                type: string
+                                checks:
+                                  - def:
+                                      type: string
+                                      format: datetime
+                                      check: string_format
+                                      offset: false
+                                      local: false
+                                      precision: null
+                                      pattern: {}
+                                    type: string
+                                    format: datetime
+                                    minLength: null
+                                    maxLength: null
+                              type: string
+                              format: datetime
+                              minLength: null
+                              maxLength: null
+                        type: object
+                    type: array
+                    element:
+                      def:
+                        type: object
+                        shape:
+                          voterId:
+                            def:
+                              type: string
+                            type: string
+                            format: null
+                            minLength: null
+                            maxLength: null
+                          choice:
+                            def:
+                              type: enum
+                              entries:
+                                approve: approve
+                                reject: reject
+                            type: enum
+                            enum:
+                              approve: approve
+                              reject: reject
+                            options:
+                              - approve
+                              - reject
+                          timestamp:
+                            def:
+                              type: string
+                              checks:
+                                - def:
+                                    type: string
+                                    format: datetime
+                                    check: string_format
+                                    offset: false
+                                    local: false
+                                    precision: null
+                                    pattern: {}
+                                  type: string
+                                  format: datetime
+                                  minLength: null
+                                  maxLength: null
+                            type: string
+                            format: datetime
+                            minLength: null
+                            maxLength: null
+                      type: object
+                  status:
+                    def:
+                      type: enum
+                      entries:
+                        pending: pending
+                        approved: approved
+                        rejected: rejected
+                    type: enum
+                    enum:
+                      pending: pending
+                      approved: approved
+                      rejected: rejected
+                    options:
+                      - pending
+                      - approved
+                      - rejected
+                  threshold:
+                    def:
+                      type: number
+                      checks:
+                        - def:
+                            type: number
+                            check: number_format
+                            abort: false
+                            format: safeint
+                          type: number
+                          minValue: -9007199254740991
+                          maxValue: 9007199254740991
+                          isInt: true
+                          isFinite: true
+                          format: safeint
+                    type: number
+                    minValue: -9007199254740991
+                    maxValue: 9007199254740991
+                    isInt: true
+                    isFinite: true
+                    format: safeint
+                  totalSigners:
+                    def:
+                      type: number
+                      checks:
+                        - def:
+                            type: number
+                            check: number_format
+                            abort: false
+                            format: safeint
+                          type: number
+                          minValue: -9007199254740991
+                          maxValue: 9007199254740991
+                          isInt: true
+                          isFinite: true
+                          format: safeint
+                    type: number
+                    minValue: -9007199254740991
+                    maxValue: 9007199254740991
+                    isInt: true
+                    isFinite: true
+                    format: safeint
+              type: object
+          page:
+            def:
+              type: number
+              checks:
+                - def:
+                    type: number
+                    check: number_format
+                    abort: false
+                    format: safeint
+                  type: number
+                  minValue: -9007199254740991
+                  maxValue: 9007199254740991
+                  isInt: true
+                  isFinite: true
+                  format: safeint
+            type: number
+            minValue: -9007199254740991
+            maxValue: 9007199254740991
+            isInt: true
+            isFinite: true
+            format: safeint
+          limit:
+            def:
+              type: number
+              checks:
+                - def:
+                    type: number
+                    check: number_format
+                    abort: false
+                    format: safeint
+                  type: number
+                  minValue: -9007199254740991
+                  maxValue: 9007199254740991
+                  isInt: true
+                  isFinite: true
+                  format: safeint
+            type: number
+            minValue: -9007199254740991
+            maxValue: 9007199254740991
+            isInt: true
+            isFinite: true
+            format: safeint
+          total:
+            def:
+              type: number
+              checks:
+                - def:
+                    type: number
+                    check: number_format
+                    abort: false
+                    format: safeint
+                  type: number
+                  minValue: -9007199254740991
+                  maxValue: 9007199254740991
+                  isInt: true
+                  isFinite: true
+                  format: safeint
+            type: number
+            minValue: -9007199254740991
+            maxValue: 9007199254740991
+            isInt: true
+            isFinite: true
+            format: safeint
+          hasNext:
+            def:
+              type: boolean
+            type: boolean
+      type: object
+    slashRequestsQuerySchema:
+      def:
+        type: object
+        shape:
+          status:
+            def:
+              type: optional
+              innerType:
+                def:
+                  type: enum
+                  entries:
+                    pending: pending
+                    approved: approved
+                    rejected: rejected
+                type: enum
+                enum:
+                  pending: pending
+                  approved: approved
+                  rejected: rejected
+                options:
+                  - pending
+                  - approved
+                  - rejected
+            type: optional
+          page:
+            def:
+              type: optional
+              innerType:
+                def:
+                  type: number
+                  coerce: true
+                  checks:
+                    - def:
+                        type: number
+                        check: number_format
+                        abort: false
+                        format: safeint
+                      type: number
+                      minValue: -9007199254740991
+                      maxValue: 9007199254740991
+                      isInt: true
+                      isFinite: true
+                      format: safeint
+                    - {}
+                type: number
+                minValue: 1
+                maxValue: 9007199254740991
+                isInt: true
+                isFinite: true
+                format: safeint
+            type: optional
+          limit:
+            def:
+              type: optional
+              innerType:
+                def:
+                  type: number
+                  coerce: true
+                  checks:
+                    - def:
+                        type: number
+                        check: number_format
+                        abort: false
+                        format: safeint
+                      type: number
+                      minValue: -9007199254740991
+                      maxValue: 9007199254740991
+                      isInt: true
+                      isFinite: true
+                      format: safeint
+                    - {}
+                    - {}
+                type: number
+                minValue: 1
+                maxValue: 100
+                isInt: true
+                isFinite: true
+                format: safeint
+            type: optional
+          offset:
+            def:
+              type: optional
+              innerType:
+                def:
+                  type: number
+                  coerce: true
+                  checks:
+                    - def:
+                        type: number
+                        check: number_format
+                        abort: false
+                        format: safeint
+                      type: number
+                      minValue: -9007199254740991
+                      maxValue: 9007199254740991
+                      isInt: true
+                      isFinite: true
+                      format: safeint
+                    - {}
+                type: number
+                minValue: 0
+                maxValue: 9007199254740991
+                isInt: true
+                isFinite: true
+                format: safeint
+            type: optional
+      type: object
     stellarAddressSchema:
       def:
         type: string
@@ -1787,7 +2634,7 @@ components:
         - bondDuration
   parameters: {}
 paths:
-  /api/bond/{address}:
+  /api/health:
     get:
       summary: Get bond status
       description: Returns the current bond status and lifecycle state for a wallet address.
