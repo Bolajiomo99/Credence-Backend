@@ -154,7 +154,7 @@ describe('E2E State Sync Integration: Horizon -> DB -> Trust -> Cache -> API', (
         direction: 'up',
         config: {
           databaseUrl: db.connectionString,
-          migrationsDir: 'src/migrations',
+          migrationsDir: 'dist/migrations',
           migrationsTable: 'pgmigrations',
           migrationsSchema: 'public',
           createSchema: true,

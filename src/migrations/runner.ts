@@ -9,6 +9,8 @@ import { runner, Migration } from 'node-pg-migrate'
 import { loadMigrationConfig, validateConfig, MigrationConfig } from './config.js'
 import { analyzeMigration, PreflightResult } from './guardrails.js'
 
+type RunnerOptions = Parameters<typeof runner>[0] & { ignorePattern?: string }
+
 export interface MigrationOptions {
   /** Direction of migration: 'up' or 'down' */
   direction: 'up' | 'down'
@@ -140,7 +142,7 @@ export async function runMigration(options: MigrationOptions): Promise<Migration
         warn: (msg: string) => console.warn(msg),
         error: (msg: string) => console.error(msg),
       },
-    })
+    } as RunnerOptions)
 
     return {
       success: true,
@@ -182,7 +184,7 @@ export async function getMigrationStatus(): Promise<{
       verbose: false,
       ignorePattern: '^(?!\\d+_).*',
       log: () => {}, // Suppress logs
-    })
+    } as RunnerOptions)
 
     // This is a simplified status check
     // In production, you might want to query the migrations table directly
