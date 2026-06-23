@@ -328,6 +328,20 @@ export const envSchema = z.object({
     .default('10000')
     .transform(Number)
     .pipe(z.number().int().min(1000)),
+
+  // Audit log export
+  AUDIT_EXPORT_MAX_WINDOW_DAYS: z
+    .string()
+    .default('90')
+    .transform(Number)
+    .pipe(z.number().int().min(1).max(3650)),
+
+  // Report generation
+  REPORT_MAX_CONCURRENT_JOBS_PER_ORG: z
+    .string()
+    .default('10')
+    .transform(Number)
+    .pipe(z.number().int().min(0).max(1000)),
 })
 
 export type Env = z.infer<typeof envSchema>
@@ -434,6 +448,12 @@ export interface Config {
   sorobanCircuitBreaker: {
     failureThreshold: number
     cooldownPeriodMs: number
+  }
+  auditLog: {
+    exportMaxWindowDays: number
+  }
+  reports: {
+    maxConcurrentJobsPerOrg: number
   }
   endpointCostWeights: Record<string, number>
   credits: {
@@ -603,6 +623,12 @@ function mapEnvToConfig(env: Env): Config {
     sorobanCircuitBreaker: {
       failureThreshold: env.SOROBAN_CIRCUIT_BREAKER_FAILURE_THRESHOLD,
       cooldownPeriodMs: env.SOROBAN_CIRCUIT_BREAKER_COOLDOWN_MS,
+    },
+    auditLog: {
+      exportMaxWindowDays: env.AUDIT_EXPORT_MAX_WINDOW_DAYS,
+    },
+    reports: {
+      maxConcurrentJobsPerOrg: env.REPORT_MAX_CONCURRENT_JOBS_PER_ORG,
     },
     endpointCostWeights: parseCostWeights(env.ENDPOINT_COST_WEIGHTS),
     credits: {
