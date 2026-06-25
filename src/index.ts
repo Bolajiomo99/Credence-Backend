@@ -2,6 +2,7 @@ import 'dotenv/config'
 import http from 'http'
 import { initTracing } from './tracing/tracer.js'
 import app from './app.js'
+import { createServer } from './app.js'
 import { createAdminRouter } from './routes/admin/index.js'
 import governanceRouter from './routes/governance.js'
 import disputesRouter from './routes/disputes.js'
@@ -96,6 +97,29 @@ if (process.env.NODE_ENV !== "test") {
     });
 
     installShutdownHandlers();
+
+    // Graceful shutdown
+    const shutdown = async (signal: string): Promise<void> => {
+      console.log(`Received ${signal}, shutting down gracefully...`)
+      
+      // Shutdown WebSocket server
+      await shutdownWebSocketServer()
+      
+      // Close HTTP server
+      server.close(() => {
+        console.log('HTTP server closed')
+        process.exit(0)
+      })
+      
+      // Force shutdown after 10 seconds
+      setTimeout(() => {
+        console.error('Forced shutdown after timeout')
+        process.exit(1)
+      }, 10000)
+    }
+
+    process.on('SIGTERM', () => void shutdown('SIGTERM'))
+    process.on('SIGINT', () => void shutdown('SIGINT'))
 
     if (process.env.DATABASE_URL) {
       const thresholdSeconds = Number(
