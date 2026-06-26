@@ -523,6 +523,13 @@ Extend with additional Horizon event ingestion when implementing the full archit
 - Integration notes: `docs/stellar-integration.md`
 - Tests: `src/clients/soroban.test.ts`
 
+## Security
+
+For security policies, reporting, and architecture documentation:
+- **Security Policy & Vulnerability Reporting**: See [SECURITY.md](SECURITY.md) for details on supported versions and how to report a vulnerability.
+- **Security Architecture**: See [docs/security.md](docs/security.md) for details on the API key scope model, encrypted evidence storage, rate limiting, and dependency scanning SLAs.
+- **Evidence Upload Security**: See [docs/evidence-upload-security.md](docs/evidence-upload-security.md) for file upload security configurations, size/count limits, and magic number validations.
+
 ## Testing
 
 For a full walkthrough — prerequisites, pg-mem vs testcontainers, running migrations, all test commands, the chaos suite, and troubleshooting — see **[docs/CONTRIBUTING-TESTING.md](docs/CONTRIBUTING-TESTING.md)**.
@@ -536,22 +543,3 @@ pnpm run coverage:audit    # audit-sensitive coverage (disputes, governance, evi
 pnpm run test:chaos        # chaos suite (requires docker-compose.test.yml up)
 ```
 
-## Operations
-
-### On-Call Runbook
-
-For on-call engineers responding to production incidents, see **[docs/RUNBOOK.md](docs/RUNBOOK.md)** for:
-
-- Common alerts and their meanings
-- First three diagnostic commands
-- Rollback procedures
-- Escalation paths
-
-Related operational documentation:
-
-- [Alert Routing](docs/alert-routing.md) — Severity levels and on-call escalation
-- [Monitoring](docs/monitoring.md) — Metrics and health checks
-- [Graceful Shutdown](docs/graceful-shutdown.md) — Service shutdown behavior
-- [Timeouts and Retries](docs/timeouts-and-retries.md) — Timeout budgets for each dependency
-- [Lock Timeout Configuration](docs/lock-timeout-configuration.md) — Lock-specific diagnostics
-- [Backup/Restore](docs/backup-restore.md) — Weekly backup verification
