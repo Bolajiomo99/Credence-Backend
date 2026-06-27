@@ -23,3 +23,15 @@ export {
   type AttestationsQuery,
   type CreateAttestationBody,
 } from './attestations.js'
+export {
+  assignRoleBodySchema,
+  revokeApiKeyBodySchema,
+  issueImpersonationTokenBodySchema,
+  inviteMemberBodySchema,
+  updateMemberRoleBodySchema,
+  type AssignRoleBody,
+  type RevokeApiKeyBody,
+  type IssueImpersonationTokenBody,
+  type InviteMemberBody,
+  type UpdateMemberRoleBody,
+} from './admin.js'

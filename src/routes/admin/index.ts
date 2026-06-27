@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express'
+import { Router, Request, Response, NextFunction } from 'express'
 import { AuthenticatedRequest, requireUserAuth, requireAdminRole, UserRole } from '../../middleware/auth.js'
 import {
   buildPaginationMeta,
@@ -7,6 +7,15 @@ import {
 import { AdminService } from '../../services/admin/index.js'
 import { auditLogService } from '../../services/audit/index.js'
 import { AppError, ErrorCode, ValidationError } from '../../lib/errors.js'
+import { validate } from '../../middleware/validate.js'
+import {
+  assignRoleBodySchema,
+  revokeApiKeyBodySchema,
+  issueImpersonationTokenBodySchema,
+  type AssignRoleBody,
+  type RevokeApiKeyBody,
+  type IssueImpersonationTokenBody,
+} from '../../schemas/index.js'
 import type { AssignRoleRequest, RevokeApiKeyRequest } from '../../services/admin/types.js'
 import type { IssueImpersonationTokenRequest } from '../../services/impersonation/types.js'
 import { ReplayService } from '../../services/replayService.js'
@@ -15,6 +24,7 @@ import { registerAllReplayHandlers } from '../../services/replayHandlers.js'
 import { IdentityRepository } from '../../db/repositories/identityRepository.js'
 import { BondsRepository } from '../../db/repositories/bondsRepository.js'
 import { pool } from '../../db/pool.js'
+import { impersonationService } from '../../services/impersonation/index.js'
 
 /**
  * Create the admin router with role and user management endpoints
@@ -37,7 +47,7 @@ export function createAdminRouter(): Router {
   /**
    * GET /api/admin/users
    */
-  router.get('/users', requireUserAuth, requireAdminRole, async (req: Request, res: Response) => {
+  router.get('/users', requireUserAuth, requireAdminRole, async (req: Request, res: Response, next: NextFunction) => {
     try {
       const authReq = req as AuthenticatedRequest
       const user = authReq.user!
@@ -75,95 +85,90 @@ export function createAdminRouter(): Router {
   /**
    * POST /api/admin/roles/assign
    */
-  router.post('/roles/assign', requireUserAuth, requireAdminRole, async (req: Request, res: Response) => {
-    try {
-      const authReq = req as AuthenticatedRequest
-      const user = authReq.user!
-      const assignRequest = req.body as AssignRoleRequest
+  router.post(
+    '/roles/assign',
+    requireUserAuth,
+    requireAdminRole,
+    validate({ body: assignRoleBodySchema }),
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const authReq = req as AuthenticatedRequest
+        const user = authReq.user!
+        const assignRequest = req.validated!.body as AssignRoleBody
 
-      // Validate request body
-      if (!assignRequest.userId || !assignRequest.role) {
-        throw new ValidationError('Missing required fields: userId, role')
+        const result = await adminService.assignRole(user.id, user.email, assignRequest as AssignRoleRequest)
+
+        res.status(200).json({
+          success: true,
+          message: result.message,
+          data: result.user,
+        })
+      } catch (error) {
+        next(error)
       }
-
-      const result = await adminService.assignRole(user.id, user.email, assignRequest)
-
-      res.status(200).json({
-        success: true,
-        message: result.message,
-        data: result.user,
-      })
-    } catch (error) {
-      next(error)
-    }
-  })
+    },
+  )
 
   /**
    * POST /api/admin/keys/revoke
    */
-  router.post('/keys/revoke', requireUserAuth, requireAdminRole, async (req: Request, res: Response) => {
-    try {
-      const authReq = req as AuthenticatedRequest
-      const user = authReq.user!
-      const revokeRequest = req.body as RevokeApiKeyRequest
+  router.post(
+    '/keys/revoke',
+    requireUserAuth,
+    requireAdminRole,
+    validate({ body: revokeApiKeyBodySchema }),
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const authReq = req as AuthenticatedRequest
+        const user = authReq.user!
+        const revokeRequest = req.validated!.body as RevokeApiKeyBody
 
-      // Validate request body
-      if (!revokeRequest.userId || !revokeRequest.apiKey) {
-        throw new ValidationError('Missing required fields: userId, apiKey')
+        const result = await adminService.revokeApiKey(user.id, user.email, revokeRequest as RevokeApiKeyRequest)
+
+        res.status(200).json({
+          success: true,
+          message: result.message,
+        })
+      } catch (error) {
+        next(error)
       }
-
-      const result = await adminService.revokeApiKey(user.id, user.email, revokeRequest)
-
-      res.status(200).json({
-        success: true,
-        message: result.message,
-      })
-    } catch (error) {
-      next(error)
-    }
-  })
+    },
+  )
 
   /**
    * POST /api/admin/impersonate
    *
    * Issue a short-lived impersonation token for support/debug purposes.
    */
-  router.post('/impersonate', requireUserAuth, requireAdminRole, (req: Request, res: Response) => {
-    try {
-      const authReq = req as AuthenticatedRequest
-      const user = authReq.user!
-      const body = req.body as Partial<IssueImpersonationTokenRequest>
+  router.post(
+    '/impersonate',
+    requireUserAuth,
+    requireAdminRole,
+    validate({ body: issueImpersonationTokenBodySchema }),
+    (req: Request, res: Response) => {
+      try {
+        const authReq = req as AuthenticatedRequest
+        const user = authReq.user!
+        const body = req.validated!.body as IssueImpersonationTokenBody
 
-      if (!body.targetUserId) {
-        res.status(400).json({ error: 'InvalidRequest', message: 'targetUserId is required' })
-        return
-      }
-      if (!body.reason) {
-        res.status(400).json({ error: 'InvalidRequest', message: 'reason is required' })
-        return
-      }
+        const issued = impersonationService.issueToken(
+          user.id,
+          user.email,
+          body as IssueImpersonationTokenRequest,
+          req.ip,
+        )
 
-      const issued = impersonationService.issueToken(
-        user.id,
-        user.email,
-        {
-          targetUserId: body.targetUserId,
-          reason: body.reason,
-          ttlSeconds: body.ttlSeconds,
-        },
-        req.ip,
-      )
-
-      res.status(201).json({ success: true, data: issued })
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error'
-      if (/User not found/i.test(message)) {
-        res.status(404).json({ error: 'NotFound', message })
-        return
+        res.status(201).json({ success: true, data: issued })
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown error'
+        if (/User not found/i.test(message)) {
+          res.status(404).json({ error: 'NotFound', message })
+          return
+        }
+        res.status(400).json({ error: 'BadRequest', message })
       }
-      res.status(400).json({ error: 'BadRequest', message })
-    }
-  })
+    },
+  )
 
   /**
    * POST /api/admin/impersonate/:tokenId/revoke
@@ -196,7 +201,7 @@ export function createAdminRouter(): Router {
   /**
    * GET /api/admin/audit-logs
    */
-  router.get('/audit-logs', requireUserAuth, requireAdminRole, async (req: Request, res: Response) => {
+  router.get('/audit-logs', requireUserAuth, requireAdminRole, async (req: Request, res: Response, next: NextFunction) => {
     try {
       const authReq = req as AuthenticatedRequest
       const user = authReq.user!
@@ -290,7 +295,7 @@ export function createAdminRouter(): Router {
    * 
    * List failed inbound events for review
    */
-  router.get('/events/failed', requireUserAuth, requireAdminRole, async (req: Request, res: Response) => {
+  router.get('/events/failed', requireUserAuth, requireAdminRole, async (req: Request, res: Response, next: NextFunction) => {
     try {
       const filters: any = {}
       if (req.query.status) filters.status = req.query.status
@@ -306,7 +311,7 @@ export function createAdminRouter(): Router {
         data: result
       })
     } catch (error: any) {
-      res.status(500).json({ error: 'InternalError', message: error.message })
+      next(error)
     }
   })
 
@@ -315,7 +320,7 @@ export function createAdminRouter(): Router {
    * 
    * Replay a specific failed event
    */
-  router.post('/events/replay/:id', requireUserAuth, requireAdminRole, async (req: Request, res: Response) => {
+  router.post('/events/replay/:id', requireUserAuth, requireAdminRole, async (req: Request, res: Response, next: NextFunction) => {
     try {
       const authReq = req as AuthenticatedRequest
       const admin = authReq.user!
@@ -330,7 +335,7 @@ export function createAdminRouter(): Router {
 
       res.status(200).json(result)
     } catch (error: any) {
-      res.status(400).json({ error: 'ReplayFailed', message: error.message })
+      next(error)
     }
   })
 
