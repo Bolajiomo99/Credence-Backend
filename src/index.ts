@@ -23,6 +23,8 @@ import { loadFailedInboundSweeperConfig } from './config/retention.js'
 import { getInvalidationBus } from './cache/index.js'
 import { createWsSubscriptionServer } from './routes/ws.js'
 import { impersonationService } from './services/impersonation/index.js'
+import { recordOomEvent } from './middleware/metrics.js'
+import { logger } from './utils/logger.js'
 
 // Outbox imports
 import { OutboxJob } from "./jobs/outbox.js";
@@ -59,11 +61,28 @@ function installShutdownHandlers(): void {
 if (process.env.NODE_ENV !== "test") {
   initTracing();
 
+  // Listen for uncaught exceptions and unhandled rejections
+  process.on('uncaughtException', (err) => {
+    logger.error('Uncaught Exception:', err);
+    if (err.message.includes('heap out of memory') || err.name === 'JavaScript heap out of memory') {
+      recordOomEvent();
+    }
+    // Let the process exit after logging
+    process.exit(1);
+  });
+
+  process.on('unhandledRejection', (reason, promise) => {
+    logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
+    if (reason instanceof Error && (reason.message.includes('heap out of memory') || reason.name === 'JavaScript heap out of memory')) {
+      recordOomEvent();
+    }
+  });
+
   try {
     const config = loadConfig();
 
     server = app.listen(config.port, () => {
-      console.log(`Credence API listening on port ${config.port}`);
+      logger.info(`Credence API listening on port ${config.port}`);
     });
 
     // Initialize WebSocket server for score subscriptions
@@ -84,7 +103,7 @@ if (process.env.NODE_ENV !== "test") {
     shutdownManager = new GracefulShutdownManager({
       server,
       gracePeriodMs: config.shutdown.gracePeriodMs,
-      logger: console.log,
+      logger: logger.info,
       forceExit: (code) => process.exit(code),
       dbPools: [pool, workerPool, replicaPool],
       redis: redisConnection,
@@ -99,17 +118,17 @@ if (process.env.NODE_ENV !== "test") {
 
     // Graceful shutdown
     const shutdown = async (signal: string): Promise<void> => {
-      console.log(`Received ${signal}, shutting down gracefully...`)
+      logger.info(`Received ${signal}, shutting down gracefully...`)
       
       // Close HTTP server
-      server?.close(() => {
-        console.log('HTTP server closed')
+      server.close(() => {
+        logger.info('HTTP server closed')
         process.exit(0)
       })
       
       // Force shutdown after 10 seconds
       setTimeout(() => {
-        console.error('Forced shutdown after timeout')
+        logger.error('Forced shutdown after timeout')
         process.exit(1)
       }, 10000)
     }
@@ -125,7 +144,7 @@ if (process.env.NODE_ENV !== "test") {
       const metrics = createAnalyticsRefreshMetrics();
       const refreshWorker = new AnalyticsRefreshWorker(
         analyticsService,
-        console.log,
+        logger.info,
         metrics,
       );
       const intervalMs = getAnalyticsRefreshIntervalMs();
@@ -133,7 +152,7 @@ if (process.env.NODE_ENV !== "test") {
       const refreshScheduler = new AnalyticsRefreshScheduler(refreshWorker, {
         intervalMs,
         runOnStart: true,
-        logger: console.log,
+        logger: logger.info,
         metrics,
       });
 
@@ -141,7 +160,7 @@ if (process.env.NODE_ENV !== "test") {
       const reconcilerScheduler = createScheduler(reconcilerJob, {
         cronExpression: '0 * * * *', // hourly
         runOnStart: false,
-        logger: console.log,
+        logger: logger.info,
         lockKey: 'cron:settlement-reconciliation'
       })
 
@@ -153,7 +172,7 @@ if (process.env.NODE_ENV !== "test") {
       }, {
         cronExpression: '0 * * * *', // hourly
         runOnStart: false,
-        logger: console.log,
+        logger: logger.info,
         lockKey: 'cron:impersonation-cleanup'
       })
 
@@ -183,11 +202,11 @@ if (process.env.NODE_ENV !== "test") {
       try {
         outboxJob = new OutboxJob(pool);
         await outboxJob.start();
-        console.log("[Main] Outbox Publisher started");
+        logger.info("[Main] Outbox Publisher started");
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Unknown error";
-        console.error(`Failed to start Outbox Publisher: ${message}`);
+        logger.error(`Failed to start Outbox Publisher: ${message}`, error);
       }
     }
 
@@ -197,18 +216,18 @@ if (process.env.NODE_ENV !== "test") {
         requestSnapshotsSweeper = new RequestSnapshotsSweeper(pool, {
           retentionDays: config.requestSnapshots.retentionDays,
           intervalMs: config.requestSnapshots.cleanupIntervalMs,
-          logger: console.log,
+          logger: logger.info,
           onMetric: (metric) => {
             // TODO: integrate with metrics system (Prometheus, etc.)
-            console.log(`[Metrics] ${metric.name}=${metric.value}`);
+            logger.info(`[Metrics] ${metric.name}=${metric.value}`);
           },
         });
         requestSnapshotsSweeper.start();
-        console.log("[Main] Request Snapshots Sweeper started");
+        logger.info("[Main] Request Snapshots Sweeper started");
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Unknown error";
-        console.error(`Failed to start Request Snapshots Sweeper: ${message}`);
+        logger.error(`Failed to start Request Snapshots Sweeper: ${message}`, error);
       }
     }
 
@@ -216,11 +235,11 @@ if (process.env.NODE_ENV !== "test") {
     try {
       invalidationBus = getInvalidationBus();
       await invalidationBus.start();
-      console.log("[Main] Cache invalidation bus started");
+      logger.info("[Main] Cache invalidation bus started");
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Unknown error";
-      console.error(`Failed to start cache invalidation bus: ${message}`);
+      logger.error(`Failed to start cache invalidation bus: ${message}`, error);
     }
 
     shutdownManager?.setScheduler(scheduler);
@@ -233,14 +252,14 @@ if (process.env.NODE_ENV !== "test") {
     if (shutdownManager && originalShutdown) {
       shutdownManager.shutdown = async (signal?: string) => {
         if (requestSnapshotsSweeper) {
-          console.log("[Main] Stopping Request Snapshots Sweeper");
+          logger.info("[Main] Stopping Request Snapshots Sweeper");
           requestSnapshotsSweeper.stop();
         }
         return originalShutdown(signal ?? "SIGTERM");
       };
     }
   } catch (error) {
-    console.error("Failed to start Credence API:", error);
+    logger.error("Failed to start Credence API:", error);
     process.exit(1);
   }
 }
