@@ -11,18 +11,21 @@ import type { TimeoutMetricsCollector } from '../../../observability/timeoutMetr
 // ---------------------------------------------------------------------------
 // Mock @connectrpc/connect so the tests compile without the actual package.
 // ---------------------------------------------------------------------------
-class MockConnectError extends Error {
-  code: number
-  details: unknown[] = []
-  rawMessage: string
-  rawBytes: undefined
-  constructor(message: string, code: number) {
-    super(message)
-    this.name = 'ConnectError'
-    this.code = code
-    this.rawMessage = message
+const { MockConnectError } = vi.hoisted(() => {
+  class MockConnectError extends Error {
+    code: number
+    details: unknown[] = []
+    rawMessage: string
+    rawBytes: undefined
+    constructor(message: string, code: number) {
+      super(message)
+      this.name = 'ConnectError'
+      this.code = code
+      this.rawMessage = message
+    }
   }
-}
+  return { MockConnectError }
+})
 
 vi.mock('@connectrpc/connect', () => ({
   ConnectError: MockConnectError,
