@@ -3,9 +3,6 @@ import type { IdentityState } from './types.js'
 import type { WebhookEventType } from '../services/webhooks/index.js'
 import { detectEventType } from './webhookDetection.js'
 import { outboxEmitter } from '../db/outbox/emitter.js'
-import { detectEventType } from './webhookEventDetection.js'
-
-export { detectEventType } from './webhookEventDetection.js'
 
 /**
  * Emit webhook event to outbox for identity state change.
@@ -46,10 +43,7 @@ export async function emitWebhookForAttestationChange(
     aggregateType: 'identity',
     aggregateId: payload.address,
     eventType,
-    payload: {
-      address: payload.address,
-      ...payload
-    },
+    payload: payload as any,
   })
 }
 
@@ -67,7 +61,7 @@ export async function emitWebhookForScoreChange(
       payload: {
         address,
         score: newScore
-      },
+      } as any,
     })
   }
 }

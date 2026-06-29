@@ -151,7 +151,7 @@ function chunkListPayload(
 ): WebhookPayload[] {
   const chunks: WebhookPayload[] = []
   const data = basePayload.data
-  if (!isListData(data)) return [basePayload]
+  if (!isListData(data)) return [basePayload as any]
 
   const chunkId = generateChunkId()
   let currentChunkItems: unknown[] = []
@@ -163,7 +163,7 @@ function chunkListPayload(
       chunkId,
       chunkIndex: chunks.length,
       totalChunks: 0,
-    }
+    } as any
     const testPayloadStr = JSON.stringify(testPayload)
     if (Buffer.byteLength(testPayloadStr, 'utf8') <= sizeCap) {
       currentChunkItems.push(item)
@@ -175,7 +175,7 @@ function chunkListPayload(
           chunkId,
           chunkIndex: chunks.length,
           totalChunks: 0,
-        })
+        } as any)
         currentChunkItems = [item]
       } else {
         // Single item too big - we'll mark as truncated later
@@ -186,7 +186,7 @@ function chunkListPayload(
           chunkIndex: chunks.length,
           totalChunks: 0,
           payloadTruncated: true,
-        })
+        } as any)
         currentChunkItems = []
       }
     }
@@ -199,7 +199,7 @@ function chunkListPayload(
       chunkId,
       chunkIndex: chunks.length,
       totalChunks: 0,
-    })
+    } as any)
   }
 
   // Update totalChunks for all chunks
@@ -460,7 +460,7 @@ export async function deliverWebhook(
     const truncatedPayload: WebhookPayload = {
       ...payload,
       payloadTruncated: true,
-    }
+    } as any
     const result = await deliverSingleWebhook(webhook, truncatedPayload, options)
     results = [result]
   }

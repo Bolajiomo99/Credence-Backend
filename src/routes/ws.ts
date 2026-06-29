@@ -118,7 +118,7 @@ export function createWsSubscriptionServer(
       let tenantId: string;
       let apiKeyId: string;
       try {
-        const keyRecord = repo.validate(apiKey);
+        const keyRecord = await repo.validate(apiKey);
         if (!keyRecord || !keyRecord.active) {
           socket.destroy();
           return;

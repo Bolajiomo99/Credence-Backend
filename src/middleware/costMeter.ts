@@ -30,7 +30,7 @@ function extractRawKey(req: Request): string | null {
   return null
 }
 
-function extractOrgId(req: Request): string | undefined {
+async function extractOrgId(req: Request): Promise<string | undefined> {
   const apiKeyRecord = (req as any).apiKeyRecord
   if (apiKeyRecord?.ownerId) return apiKeyRecord.ownerId
 
@@ -42,7 +42,7 @@ function extractOrgId(req: Request): string | undefined {
 
   const rawKey = extractRawKey(req)
   if (rawKey) {
-    const key = validateApiKey(rawKey)
+    const key = await validateApiKey(rawKey)
     if (key?.ownerId) return key.ownerId
   }
 
@@ -199,8 +199,8 @@ export function createCostMeterMiddleware(
   config: CostMeterConfig,
   getPool: () => Pool,
 ) {
-  return (req: Request, res: Response, next: NextFunction): void => {
-    const orgId = extractOrgId(req)
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const orgId = await extractOrgId(req)
     if (!orgId) {
       next()
       return

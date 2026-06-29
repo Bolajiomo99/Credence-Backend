@@ -71,14 +71,13 @@ export async function generateApiKey(
   ownerId: string,
   scopes: KeyScope[] = [],
   tier: SubscriptionTier = 'free',
-  scopes?: string[],
-): CreateApiKeyResult {
+): Promise<CreateApiKeyResult> {
   const random = randomBytes(32).toString('hex') // 64 hex chars
   const rawKey = `cr_${random}` // 67 chars total
   const prefix = extractPrefix(rawKey)
   const id = randomBytes(8).toString('hex')
 
-  const grantedScopes = scopes ?? [scope]
+  const grantedScopes = scopes.length > 0 ? scopes : ['read']
   const primaryScope = grantedScopes[0] as KeyScope
 
   const stored: StoredApiKey = {
@@ -94,7 +93,7 @@ export async function generateApiKey(
     active: true,
   }
 
-  store.set(id, stored)
+  inMemoryStore.set(id, stored)
   return {
     id,
     key: rawKey,
@@ -157,12 +156,12 @@ export async function revokeApiKey(id: string): Promise<boolean> {
  * Rotate an API key: revokes the existing key and issues a new one with the same
  * scopes, tier, and owner. Returns null if the key doesn't exist or is already revoked.
  */
-export function rotateApiKey(id: string): CreateApiKeyResult | null {
-  const existing = store.get(id)
+export async function rotateApiKey(id: string): Promise<CreateApiKeyResult | null> {
+  const existing = inMemoryStore.get(id)
   if (!existing || !existing.active) return null
 
   existing.active = false
-  return generateApiKey(existing.ownerId, existing.scope, existing.tier, existing.scopes)
+  return await generateApiKey(existing.ownerId, existing.scopes, existing.tier)
 }
 
 /**
@@ -171,7 +170,7 @@ export function rotateApiKey(id: string): CreateApiKeyResult | null {
  * @returns Key metadata (minus `hashedKey`), or null if not found.
  */
 export function findApiKeyById(id: string): Omit<StoredApiKey, 'hashedKey'> | null {
-  const key = store.get(id)
+  const key = inMemoryStore.get(id)
   if (!key) return null
   const { hashedKey: _h, ...rest } = key
   return rest
