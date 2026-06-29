@@ -191,6 +191,8 @@ export function createDeadlineInterceptor(
       if (e instanceof ConnectError && e.code === Code.DeadlineExceeded) {
         const err = new SdkRequestTimeoutCredenceError(
           `gRPC server returned DEADLINE_EXCEEDED for ${methodPath}: ${e.message}`,
+          0,
+          undefined,
           { cause: e },
         )
         recordTimeout(collector, methodPath, effectiveMs, durationMs, err)

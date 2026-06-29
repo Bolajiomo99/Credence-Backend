@@ -48,6 +48,28 @@ function createReq(overrides: Record<string, unknown> = {}) {
   }
 }
 
+/** Returns a mock next that rejects when the request signal aborts. */
+function createSignalAwareNext(resolveAfterMs?: number) {
+  return vi.fn().mockImplementation((req: any) => {
+    return new Promise((resolve, reject) => {
+      if (req.signal.aborted) {
+        reject(new DOMException('The operation was aborted', 'AbortError'))
+        return
+      }
+      const onAbort = (): void => {
+        reject(new DOMException('The operation was aborted', 'AbortError'))
+      }
+      req.signal.addEventListener('abort', onAbort, { once: true })
+      if (resolveAfterMs === undefined) return // hang until signal aborts
+      setTimeout(() => {
+        req.signal.removeEventListener('abort', onAbort)
+        resolve({})
+      }, resolveAfterMs)
+    })
+  })
+}
+
+/** Returns a mock next that resolves immediately (call succeeds). */
 function createSuccessNext() {
   return vi.fn().mockResolvedValue({})
 }
@@ -187,13 +209,10 @@ describe('createDeadlineInterceptor', () => {
   // -----------------------------------------------------------------------
 
   it('throws SdkRequestTimeoutCredenceError when call exceeds the timeout budget', async () => {
-    // Using a real timer for this test so the AbortSignal works properly.
     vi.useRealTimers()
 
     const interceptor = createDeadlineInterceptor({ '*': 50 }, collector)
-    const next = vi.fn().mockImplementation(
-      () => new Promise(() => { /* never resolves */ }),
-    )
+    const next = createSignalAwareNext() // hangs until signal aborts
     const req = createReq()
 
     const promise = interceptor(next)(req)
@@ -207,9 +226,7 @@ describe('createDeadlineInterceptor', () => {
     vi.useRealTimers()
 
     const interceptor = createDeadlineInterceptor({ '*': 50 }, collector)
-    const next = vi.fn().mockImplementation(
-      () => new Promise(() => { /* never resolves */ }),
-    )
+    const next = createSignalAwareNext() // hangs until signal aborts
     const req = createReq()
 
     await expect(interceptor(next)(req)).rejects.toThrow()
@@ -273,22 +290,24 @@ describe('createDeadlineInterceptor', () => {
   // -----------------------------------------------------------------------
 
   it('aborts the composed signal when parent signal aborts', async () => {
+    vi.useRealTimers()
     const interceptor = createDeadlineInterceptor({ '*': 10_000 }, collector)
     const parentController = new AbortController()
     const req = createReq({ signal: parentController.signal })
     let interceptedSignal: AbortSignal | undefined
     const next = vi.fn().mockImplementation((r: any) => {
       interceptedSignal = r.signal
-      return Promise.resolve({})
+      return new Promise((_, reject) => {
+        const onAbort = (): void => reject(new DOMException('Aborted', 'AbortError'))
+        r.signal.addEventListener('abort', onAbort, { once: true })
+      })
     })
 
     const promise = interceptor(next)(req)
     parentController.abort()
     await expect(promise).rejects.toThrow()
-
-    // The intercepted signal should be aborted
     expect(interceptedSignal?.aborted).toBe(true)
-  })
+  }, 10_000)
 
   it('cleans up timer and listener after successful call', async () => {
     const interceptor = createDeadlineInterceptor({ '*': 10_000 }, collector)
